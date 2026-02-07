@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import api from './api';
+
 
 const CustomerForm = ({ onSave, onDiscard }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        password: '', // Added password
         phone: '',
         address: '',
         city: '',
@@ -18,24 +21,29 @@ const CustomerForm = ({ onSave, onDiscard }) => {
         }));
     };
 
-    const handleSubmit = () => {
-        if (!formData.name.trim() || !formData.email.trim()) {
-            alert('The field must be filled (Name and Email are required)');
+    const handleSubmit = async () => {
+        if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
+            alert('Name, Email and Password are required');
             return;
         }
 
-        const newCustomer = {
-            id: `C00${Math.floor(Math.random() * 90) + 10}`,
+        const payload = {
             name: formData.name,
             email: formData.email,
+            password: formData.password,
             phone: formData.phone,
-            subscriptions: 0,
-            totalRevenue: '$0.00',
-            status: formData.status
+            company: '', // Optional
+            address: `${formData.address}${formData.city ? ', ' + formData.city : ''}`
         };
 
-        if (onSave) {
-            onSave(newCustomer);
+        try {
+            const { data } = await api.post('/auth/register', payload);
+            if (onSave) {
+                onSave(data); // data contains id, name, email
+            }
+        } catch (error) {
+            console.error('Failed to create customer', error);
+            alert(error.response?.data?.message || 'Failed to create customer');
         }
     };
 
@@ -87,6 +95,19 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
                                 placeholder="contact@example.com"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-[#111813] dark:text-[#e0e7e1] mb-1">
+                                Password*
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
+                                placeholder="********"
                             />
                         </div>
                         <div>

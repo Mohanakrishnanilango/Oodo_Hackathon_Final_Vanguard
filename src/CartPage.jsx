@@ -1,14 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PortalHeader from './components/PortalHeader';
+import api from './api';
 
 const CartPage = () => {
     const [activeTab, setActiveTab] = useState('order');
     const [quantity, setQuantity] = useState(1);
     const [discountCode, setDiscountCode] = useState('');
-    const [discountApplied, setDiscountApplied] = useState(true);
+    const [discountApplied, setDiscountApplied] = useState(false);
+    const [cartItems, setCartItems] = useState([]);
     const navigate = useNavigate();
     const themeColor = '#2ecc71';
+
+    useEffect(() => {
+        const fetchCart = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const { data } = await api.get('/cart');
+                setCartItems(data);
+            } catch (error) {
+                console.error("Failed to fetch cart", error);
+            }
+        };
+        fetchCart();
+    }, []);
+
+    const handleRemove = async (id) => {
+        try {
+            await api.delete(`/cart/${id}`);
+            setCartItems(prev => prev.filter(item => item.id !== id));
+        } catch (error) {
+            console.error("Failed to remove item", error);
+        }
+    };
+
+    const handleCheckout = async () => {
+        try {
+            const { data } = await api.post('/orders', {});
+            alert('Order placed successfully!');
+            navigate('/portal/orders');
+        } catch (error) {
+            console.error("Failed to place order", error);
+            alert("Failed to place order");
+        }
+    };
+
+    const subtotal = cartItems.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
+    const tax = subtotal * 0.12;
+    const total = subtotal + tax;
 
     const styles = {
         container: {
@@ -205,36 +246,32 @@ const CartPage = () => {
                     {activeTab === 'order' && (
                         <div style={styles.contentArea}>
                             <div style={styles.cartItems}>
-                                <div style={styles.cartItem}>
-                                    <div style={styles.itemImage}>SaaS Product</div>
-                                    <div style={styles.itemDetails}>
-                                        <div style={styles.itemName}>Cloud Hosting Professional</div>
-                                        <div style={{ color: '#61896b', fontSize: '13px' }}>Billing: Monthly</div>
-                                        <button style={styles.removeButton}>Remove</button>
-                                    </div>
-                                    <div style={styles.itemPrice}>₹1,200.00</div>
-                                </div>
-
-                                <div style={styles.cartItem}>
-                                    <div style={styles.itemImage}>Promo</div>
-                                    <div style={styles.itemDetails}>
-                                        <div style={styles.itemName}>Welcome Discount</div>
-                                        <div style={{ color: '#2ecc71', fontSize: '12px', fontWeight: 'bold' }}>10% OFF applied</div>
-                                        <button style={styles.removeButton}>Remove coupon</button>
-                                    </div>
-                                    <div style={{ ...styles.itemPrice, color: '#2ecc71' }}>-₹120.00</div>
-                                </div>
+                                {cartItems.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center' }}>Your cart is empty.</div>
+                                ) : (
+                                    cartItems.map(item => (
+                                        <div key={item.id} style={styles.cartItem}>
+                                            <div style={styles.itemImage}>{item.name.substring(0, 3).toUpperCase()}</div>
+                                            <div style={styles.itemDetails}>
+                                                <div style={styles.itemName}>{item.name}</div>
+                                                <div style={{ color: '#61896b', fontSize: '13px' }}>Qty: {item.quantity}</div>
+                                                <button style={styles.removeButton} onClick={() => handleRemove(item.id)}>Remove</button>
+                                            </div>
+                                            <div style={styles.itemPrice}>₹{(parseFloat(item.price) * item.quantity).toFixed(2)}</div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
 
                             <div style={styles.orderSummary}>
                                 <div style={styles.summaryRow}>
-                                    <span>Subtotal</span><span style={{ color: '#111813' }}>₹1,080.00</span>
+                                    <span>Subtotal</span><span style={{ color: '#111813' }}>₹{subtotal.toFixed(2)}</span>
                                 </div>
                                 <div style={styles.summaryRow}>
-                                    <span>GST (12%)</span><span style={{ color: '#111813' }}>₹120.00</span>
+                                    <span>GST (12%)</span><span style={{ color: '#111813' }}>₹{tax.toFixed(2)}</span>
                                 </div>
                                 <div style={styles.summaryTotal}>
-                                    <span>Total</span><span style={{ color: themeColor }}>₹1,200.00</span>
+                                    <span>Total</span><span style={{ color: themeColor }}>₹{total.toFixed(2)}</span>
                                 </div>
 
                                 <div style={styles.discountRow}>
@@ -282,7 +319,7 @@ const CartPage = () => {
                         <div style={{ padding: '64px', textAlign: 'center' }}>
                             <h2 style={{ fontSize: '24px', fontWeight: '900', marginBottom: '16px' }}>Almost there!</h2>
                             <p style={{ color: '#61896b', marginBottom: '32px' }}>This section is integrated with the secure payment gateway.</p>
-                            <button style={{ ...styles.checkoutButton, width: 'auto', padding: '18px 48px' }} onClick={() => navigate('/portal/orders')}>Complete My Purchase</button>
+                            <button style={{ ...styles.checkoutButton, width: 'auto', padding: '18px 48px' }} onClick={handleCheckout}>Complete My Purchase</button>
                         </div>
                     )}
                 </div>

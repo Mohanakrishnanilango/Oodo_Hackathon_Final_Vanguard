@@ -2,11 +2,26 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PortalHeader from './components/PortalHeader';
 import AddressCard from './components/AddressCard';
+import api from './api';
 
 const OrderPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const themeColor = '#2ecc71';
+
+    const [order, setOrder] = React.useState(null);
+
+    React.useEffect(() => {
+        const fetchOrder = async () => {
+            try {
+                const { data } = await api.get(`/subscriptions/${id}`);
+                setOrder(data);
+            } catch (error) {
+                console.error("Failed to fetch order", error);
+            }
+        };
+        fetchOrder();
+    }, [id]);
 
     const styles = {
         container: {
@@ -124,6 +139,12 @@ const OrderPage = () => {
         },
     };
 
+    if (!order) return <div>Loading...</div>;
+
+    // View Logic
+    const displayStatus = (order.status === 'Confirmed' || order.status === 'Active') ? 'Done' : order.status;
+    const statusColor = displayStatus === 'Done' ? '#2ecc71' : displayStatus === 'Cancelled' ? '#e74c3c' : '#f1c40f';
+
     return (
         <div style={styles.container}>
             <PortalHeader themeColor={themeColor} />
@@ -131,7 +152,14 @@ const OrderPage = () => {
             <div style={styles.mainWrapper}>
                 <div style={styles.headerRow}>
                     <div style={styles.orderTitle}>Order <span style={{ color: themeColor }}>{id}</span></div>
-                    <span style={styles.statusBadge}>In Progress</span>
+                    <span style={{
+                        ...styles.statusBadge,
+                        backgroundColor: `${statusColor}15`,
+                        color: statusColor,
+                        borderColor: `${statusColor}30`
+                    }}>
+                        {displayStatus}
+                    </span>
                 </div>
 
                 <div style={styles.grid}>
@@ -139,19 +167,15 @@ const OrderPage = () => {
                         {/* Items Section */}
                         <div style={styles.card}>
                             <div style={styles.sectionTitle}>Order Items</div>
-                            <div style={styles.productRow}>
-                                <div style={styles.productInfo}>
-                                    <span style={styles.productName}>Professional Analytics Suite</span>
-                                    <span style={styles.productQty}>1 Unit × ₹1,200.00</span>
+                            {order.lines.map((line, idx) => (
+                                <div key={idx} style={styles.productRow}>
+                                    <div style={styles.productInfo}>
+                                        <span style={styles.productName}>{line.product}</span>
+                                        <span style={styles.productQty}>{line.quantity} Unit × ₹{line.unitPrice}</span>
+                                    </div>
+                                    <span style={styles.productPrice}>₹{line.subtotal}</span>
                                 </div>
-                                <span style={styles.productPrice}>₹1,200.00</span>
-                            </div>
-                            <div style={{ ...styles.productRow, borderBottom: 'none' }}>
-                                <div style={styles.productInfo}>
-                                    <span style={styles.productName}>Tax (GST 12%)</span>
-                                </div>
-                                <span style={styles.productPrice}>₹144.00</span>
-                            </div>
+                            ))}
                         </div>
 
                         {/* Summary Section */}
@@ -159,15 +183,15 @@ const OrderPage = () => {
                             <div style={styles.sectionTitle}>Financial Summary</div>
                             <div style={styles.summaryRow}>
                                 <span>Untaxed Amount</span>
-                                <span style={{ color: '#111813', fontWeight: '700' }}>₹1,200.00</span>
+                                <span style={{ color: '#111813', fontWeight: '700' }}>₹{(Number(order.recurring_amount)).toFixed(2)}</span>
                             </div>
                             <div style={styles.summaryRow}>
                                 <span>Total Taxes</span>
-                                <span style={{ color: '#111813', fontWeight: '700' }}>₹144.00</span>
+                                <span style={{ color: '#111813', fontWeight: '700' }}>₹0.00</span>
                             </div>
                             <div style={styles.summaryTotal}>
                                 <span>Grand Total</span>
-                                <span style={{ color: themeColor }}>₹1,344.00</span>
+                                <span style={{ color: themeColor }}>₹{(Number(order.recurring_amount)).toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
@@ -175,26 +199,31 @@ const OrderPage = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
                         {/* Address Section */}
                         <div style={styles.card}>
-                            <AddressCard />
+                            <AddressCard customer={order.customer} />
                         </div>
 
                         {/* Invoices Section */}
                         <div style={styles.card}>
                             <div style={styles.sectionTitle}>Related Invoices</div>
-                            <div
-                                style={styles.invoiceLink}
-                                onClick={() => navigate('/portal/invoices')}
-                                onMouseOver={(e) => { e.currentTarget.style.borderColor = themeColor; e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.02)'; }}
-                                onMouseOut={(e) => { e.currentTarget.style.borderColor = '#dbe6de'; e.currentTarget.style.backgroundColor = '#f8faf9'; e.currentTarget.style.boxShadow = 'none'; }}
-                            >
-                                <div style={{ width: '44px', height: '44px', backgroundColor: 'rgba(46,204,113,0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: themeColor }}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>description</span>
+                            {order.invoices.length > 0 ? order.invoices.map(inv => (
+                                <div
+                                    key={inv.id}
+                                    style={styles.invoiceLink}
+                                    onClick={() => navigate(`/portal/invoice/${inv.id}`)}
+                                    onMouseOver={(e) => { e.currentTarget.style.borderColor = themeColor; e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.02)'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.borderColor = '#dbe6de'; e.currentTarget.style.backgroundColor = '#f8faf9'; e.currentTarget.style.boxShadow = 'none'; }}
+                                >
+                                    <div style={{ width: '44px', height: '44px', backgroundColor: 'rgba(46,204,113,0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: themeColor }}>
+                                        <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>description</span>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '14px', fontWeight: '900', color: '#111813' }}>{inv.id}</div>
+                                        <div style={{ fontSize: '12px', color: '#61896b', fontWeight: '500' }}>{inv.date} · {inv.status}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div style={{ fontSize: '14px', fontWeight: '900', color: '#111813' }}>INV/2026/001</div>
-                                    <div style={{ fontSize: '12px', color: '#61896b', fontWeight: '500' }}>Feb 06, 2026 · Paid</div>
-                                </div>
-                            </div>
+                            )) : (
+                                <div style={{ color: '#61896b', fontStyle: 'italic' }}>No invoices yet</div>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -1,32 +1,78 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from './api';
 import './Login.css';
 
 const Login = () => {
     const [isRightPanelActive, setIsRightPanelActive] = useState(false);
-    const [loginEmail, setLoginEmail] = useState('');
-    const [loginPassword, setLoginPassword] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
-
     const handleSignUpClick = () => {
         setIsRightPanelActive(true);
+        setError(''); // Clear error when switching panels
     };
 
     const handleSignInClick = () => {
         setIsRightPanelActive(false);
+        setError('');
     };
 
-    const handleLoginSubmit = (e) => {
-        e.preventDefault();
+    const [registerName, setRegisterName] = useState('');
+    const [registerEmail, setRegisterEmail] = useState('');
+    const [registerPassword, setRegisterPassword] = useState('');
 
-        // Simple mock authentication logic
-        if (loginEmail.toLowerCase() === 'internal@test.com') {
-            navigate('/', { state: { userRole: 'internal' } });
-        } else if (loginEmail.toLowerCase() === 'portal@test.com') {
-            navigate('/portal/home', { state: { userRole: 'portal' } });
-        } else {
-            // Default behavior for other users (e.g. admin or customers)
-            navigate('/', { state: { userRole: 'admin' } });
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
+        console.log("Attempting login with:", email);
+
+        try {
+            const { data } = await api.post('/auth/login', { email, password });
+            console.log("Login success:", data);
+
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data));
+
+            // Redirect based on role
+            if (data.role === 'admin') {
+                navigate('/');
+            } else {
+                navigate('/portal/home');
+            }
+        } catch (err) {
+            console.error("Login failed:", err);
+            setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
+        console.log("Attempting request with:", registerEmail);
+
+        try {
+            const { data } = await api.post('/auth/register', {
+                name: registerName,
+                email: registerEmail,
+                password: registerPassword
+            });
+            console.log("Register success:", data);
+
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data));
+            navigate('/portal/home');
+        } catch (err) {
+            console.error("Register failed:", err);
+            setError(err.response?.data?.message || 'Registration failed.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -40,7 +86,7 @@ const Login = () => {
 
                 {/* Sign Up Form */}
                 <div className="form-container sign-up-container">
-                    <form action="#" className="bg-white dark:bg-[#1a2e1f] flex flex-col items-center justify-center h-full px-12 text-center">
+                    <form onSubmit={handleRegister} className="bg-white dark:bg-[#1a2e1f] flex flex-col items-center justify-center h-full px-12 text-center">
                         <h1 className="text-[#111813] dark:text-white text-2xl font-bold tracking-tight mb-4">Start Subscription</h1>
                         <div className="flex gap-4 my-4">
                             <button type="button" className="w-10 h-10 rounded-full border border-[#dbe6de] bg-white flex items-center justify-center text-[#61896b] transition-all hover:bg-primary hover:text-[#111813] hover:border-primary">
@@ -55,11 +101,36 @@ const Login = () => {
                         </div>
                         <span className="text-sm text-[#61896b] dark:text-[#a0cfa5] mb-4">or use your email for registration</span>
 
-                        <input type="text" placeholder="Full Name" className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60" />
-                        <input type="email" placeholder="Email Address" className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60" />
-                        <input type="password" placeholder="Create Password" className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60" />
+                        <input
+                            type="text"
+                            placeholder="Full Name"
+                            className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60"
+                            value={registerName}
+                            onChange={(e) => setRegisterName(e.target.value)}
+                        />
+                        <input
+                            type="email"
+                            placeholder="Email Address"
+                            className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60"
+                            value={registerEmail}
+                            onChange={(e) => setRegisterEmail(e.target.value)}
+                        />
+                        <input
+                            type="password"
+                            placeholder="Create Password"
+                            className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60"
+                            value={registerPassword}
+                            onChange={(e) => setRegisterPassword(e.target.value)}
+                        />
 
-                        <button className="mt-4 bg-primary hover:bg-primary-dark text-[#111813] font-bold py-3 px-12 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform active:scale-95 uppercase text-xs tracking-wider">
+                        {/* Error display for Sign Up as well */}
+                        {isRightPanelActive && error && (
+                            <div className="text-red-500 text-sm mb-2 font-medium">
+                                {error}
+                            </div>
+                        )}
+
+                        <button type="submit" className="mt-4 bg-primary hover:bg-primary-dark text-[#111813] font-bold py-3 px-12 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform active:scale-95 uppercase text-xs tracking-wider">
                             Get Started
                         </button>
 
@@ -75,7 +146,7 @@ const Login = () => {
 
                 {/* Sign In Form */}
                 <div className="form-container sign-in-container">
-                    <form onSubmit={handleLoginSubmit} className="bg-white dark:bg-[#1a2e1f] flex flex-col items-center justify-center h-full px-12 text-center">
+                    <form onSubmit={handleLogin} className="bg-white dark:bg-[#1a2e1f] flex flex-col items-center justify-center h-full px-12 text-center">
                         <h1 className="text-[#111813] dark:text-white text-2xl font-bold tracking-tight mb-4">Subscriber Login</h1>
                         <div className="flex gap-4 my-4">
                             <button type="button" className="w-10 h-10 rounded-full border border-[#dbe6de] bg-white flex items-center justify-center text-[#61896b] transition-all hover:bg-primary hover:text-[#111813] hover:border-primary">
@@ -94,20 +165,26 @@ const Login = () => {
                             type="email"
                             placeholder="Email"
                             className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60"
-                            value={loginEmail}
-                            onChange={(e) => setLoginEmail(e.target.value)}
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                         />
                         <input
                             type="password"
                             placeholder="Password"
                             className="form-input w-full rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-[#111813] dark:text-white px-4 py-3 mb-2 focus:border-primary focus:ring-primary placeholder-[#61896b]/60"
-                            value={loginPassword}
-                            onChange={(e) => setLoginPassword(e.target.value)}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
                         />
 
                         <Link to="/forget-password" className="text-[#61896b] hover:text-primary text-xs font-medium my-2 transition-colors">
                             Forgot your password?
                         </Link>
+
+                        {error && (
+                            <div className="text-red-500 text-sm mb-2 font-medium">
+                                {error}
+                            </div>
+                        )}
 
                         <button type="submit" className="mt-4 bg-primary hover:bg-primary-dark text-[#111813] font-bold py-3 px-12 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform active:scale-95 uppercase text-xs tracking-wider">
                             Sign In

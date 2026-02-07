@@ -1,8 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PortalHeader from './components/PortalHeader';
+import api from './api';
 
 export default function PortalHomePage() {
     const themeColor = '#2ecc71';
+    const [userName, setUserName] = useState('');
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const { data } = await api.get('/auth/me');
+                setUserName(data.name ? `, ${data.name.split(' ')[0]}` : '');
+            } catch (error) {
+                console.error("Failed to fetch user", error);
+            }
+        };
+        fetchUser();
+    }, []);
 
     const styles = {
         page: {
@@ -60,7 +74,7 @@ export default function PortalHomePage() {
             {/* Main Content */}
             <div style={styles.content}>
                 <div style={styles.badge}>Customer Self-Service</div>
-                <h1 style={styles.heading}>YOUR BUSINESS <span style={styles.span}>CENTRAL.</span></h1>
+                <h1 style={styles.heading}>WELCOME{userName ? userName.toUpperCase() : ''}<span style={styles.span}>.</span></h1>
                 <p style={styles.subheading}>Manage your active subscriptions, review billing history, and browse our cloud marketplace from a single interface.</p>
             </div>
         </div>

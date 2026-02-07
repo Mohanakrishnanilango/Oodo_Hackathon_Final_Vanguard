@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PortalHeader from './components/PortalHeader';
+import api from './api';
 
 const OrdersPage = () => {
     const navigate = useNavigate();
@@ -103,11 +104,30 @@ const OrdersPage = () => {
         }
     };
 
-    const orders = [
-        { id: 'S0001', date: 'Feb 06, 2026', total: '₹1,200.00', status: 'In Progress', statusColor: '#f1c40f' },
-        { id: 'S0002', date: 'Jan 28, 2026', total: '₹4,800.00', status: 'Confirmed', statusColor: '#2ecc71' },
-        { id: 'S0003', date: 'Jan 15, 2026', total: '₹2,100.00', status: 'Cancelled', statusColor: '#e74c3c' },
-    ];
+    const [orders, setOrders] = useState([]);
+
+    useEffect(() => {
+        const fetchOrders = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const { data } = await api.get('/orders');
+                // Map API data
+                const formatted = data.map(o => ({
+                    id: `S${String(o.id).padStart(4, '0')}`,
+                    date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                    total: `₹${o.recurring_amount}`,
+                    status: o.status,
+                    statusColor: o.status === 'Confirmed' ? '#2ecc71' : o.status === 'Cancelled' ? '#e74c3c' : '#f1c40f'
+                }));
+                setOrders(formatted);
+            } catch (error) {
+                console.error("Failed to fetch orders", error);
+            }
+        };
+        fetchOrders();
+    }, []);
 
     return (
         <div style={styles.container}>

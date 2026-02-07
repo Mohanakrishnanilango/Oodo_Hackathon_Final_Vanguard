@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PortalHeader from './components/PortalHeader';
+import api from './api';
 
 const ShopPage = () => {
     const [productTypeOpen, setProductTypeOpen] = useState(false);
@@ -186,14 +187,43 @@ const ShopPage = () => {
         },
     };
 
-    const products = [
-        { id: 1, name: 'Cloud Storage Pro', badge: 'New', price: '₹1,200', billing: 'Monthly' },
-        { id: 2, name: 'Enterprise CRM', badge: null, price: '₹960', billing: 'Per User' },
-        { id: 3, name: 'Security Suite', badge: 'Sale', price: '₹8,400', billing: 'Yearly' },
-        { id: 4, name: 'Analytics Pro', badge: null, price: '₹1,500', billing: 'Monthly' },
-        { id: 5, name: 'HR Manager', badge: null, price: '₹1,100', billing: 'Monthly' },
-        { id: 6, name: 'API Access', badge: 'New', price: '₹7,000', billing: 'Yearly' },
-    ];
+    const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const { data } = await api.get('/products');
+                // Map API data to UI format if needed
+                const formatted = data.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    price: `$${p.price}`,
+                    badge: p.type === 'software' ? 'License' : null,
+                    billing: 'Monthly' // or fetch from backend if available
+                }));
+                setProducts(formatted);
+            } catch (error) {
+                console.error("Failed to fetch products", error);
+            }
+        };
+        fetchProducts();
+    }, []);
+
+    const addToCart = async (product) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/login');
+            return;
+        }
+
+        try {
+            await api.post('/cart', { productId: product.id, quantity: 1 });
+            alert('Added to cart!');
+        } catch (error) {
+            console.error("Failed to add to cart", error);
+            alert("Failed to add to cart");
+        }
+    };
 
     return (
         <div style={styles.container}>
@@ -276,7 +306,7 @@ const ShopPage = () => {
                             <div
                                 key={product.id}
                                 style={styles.productCard}
-                                onClick={() => navigate(`/portal/product/${product.id}`)}
+                                onClick={() => addToCart(product)} // Changed from navigate to addToCart for now, or navigate to detail then add
                                 onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.borderColor = themeColor; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.05)'; }}
                                 onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = '#dbe6de'; e.currentTarget.style.boxShadow = '0 2px 15px rgba(0,0,0,0.02)'; }}
                             >

@@ -31,6 +31,7 @@ function App() {
           <Route path="/portal/orders" element={<OrdersPage />} />
           <Route path="/portal/order/:id" element={<OrderPage />} />
           <Route path="/portal/invoices" element={<InvoicePage />} />
+          <Route path="/portal/invoice/:id" element={<InvoicePage />} />
           <Route path="/portal/product/:id" element={<ProductPage />} />
 
           {/* Redirect any unknown route to the dashboard */}

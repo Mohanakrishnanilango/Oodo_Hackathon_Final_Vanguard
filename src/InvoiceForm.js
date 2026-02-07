@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from './api';
 
 const InvoiceForm = ({ customers, onSave, onDiscard }) => {
     const [formData, setFormData] = useState({
@@ -17,25 +18,34 @@ const InvoiceForm = ({ customers, onSave, onDiscard }) => {
         }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!formData.customer || !formData.amount || parseFloat(formData.amount) <= 0) {
-            alert('the field must be filled');
+            alert('Customer and Amount must be filled');
             return;
         }
 
-        const newInvoice = {
-            id: `INV/${new Date().getFullYear()}/${Math.floor(Math.random() * 900) + 100}`,
-            customer: formData.customer,
-            subscription: formData.subscription,
-            date: new Date(formData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            dueDate: new Date(formData.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            amount: `$${parseFloat(formData.amount).toFixed(2)}`,
-            status: 'Draft',
-            paymentHistory: []
+        const selectedCustomer = customers.find(c => c.name === formData.customer);
+        if (!selectedCustomer) {
+            alert('Invalid Customer selected');
+            return;
+        }
+
+        const payload = {
+            customer_id: selectedCustomer.id,
+            subscription_id: null, // Manual invoice
+            amount: parseFloat(formData.amount),
+            due_date: formData.dueDate
         };
 
-        if (onSave) {
-            onSave(newInvoice);
+        try {
+            const { data } = await api.post('/invoices', payload);
+            if (onSave) {
+                // Format data for UI if needed or let parent handle it
+                onSave(data);
+            }
+        } catch (error) {
+            console.error('Failed to create invoice', error);
+            alert('Failed to create invoice');
         }
     };
 

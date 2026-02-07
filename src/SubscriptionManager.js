@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import api from './api';
 
 const RecurringPlans = ['Monthly', 'Yearly', 'Weekly'];
 const PaymentTerms = ['Immediate Payment', '15 Days', '30 Days', 'End of Following Month'];
 
-const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invoices, setInvoices, userRole }) => {
+const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invoices, setInvoices, userRole, products, customers }) => {
     const [view, setView] = useState('list'); // 'list' or 'form'
     const [currentSubscription, setCurrentSubscription] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -47,11 +48,20 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
         setView('form');
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (currentSubscription && currentSubscription.id !== 'New') {
-            setSubscriptions(subscriptions.filter(s => s.id !== currentSubscription.id));
+            if (!window.confirm('Are you sure you want to delete this subscription?')) return;
+            try {
+                await api.delete(`/subscriptions/${currentSubscription.id}`);
+                setSubscriptions(subscriptions.filter(s => s.id !== currentSubscription.id));
+                setView('list');
+            } catch (error) {
+                console.error('Failed to delete subscription', error);
+                alert('Failed to delete subscription');
+            }
+        } else {
+            setView('list');
         }
-        setView('list');
     };
 
     const validateForm = () => {
@@ -79,32 +89,74 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
         return true;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!validateForm()) return;
 
-        const recurringAmount = `$${currentSubscription.orderLines.reduce((acc, line) => acc + parseFloat(line.subtotal || 0), 0).toFixed(2)}`;
+        const recurringAmount = currentSubscription.orderLines.reduce((acc, line) => acc + parseFloat(line.subtotal || 0), 0);
 
-        if (currentSubscription.id === 'New') {
-            const newId = `S000${subscriptions.length + 1}`;
-            setSubscriptions([...subscriptions, { ...currentSubscription, id: newId, recurring: recurringAmount }]);
-        } else {
-            setSubscriptions(subscriptions.map(s => s.id === currentSubscription.id ? { ...currentSubscription, recurring: recurringAmount } : s));
+        // Prepare payload for backend
+        const payload = {
+            customer_id: customers.find(c => c.name === currentSubscription.customer)?.id || 1, // Fallback to 1 (Admin) if not found/new
+            plan: currentSubscription.plan,
+            start_date: currentSubscription.startDate,
+            payment_term: currentSubscription.paymentTerm || 'Immediate Payment',
+            sales_person: currentSubscription.salesPerson,
+            orderLines: currentSubscription.orderLines.map(line => ({
+                product: line.product,
+                productId: line.productId || products.find(p => p.name === line.product)?.id, // Try to find ID
+                quantity: line.quantity,
+                unitPrice: line.unitPrice,
+                subtotal: line.subtotal
+            }))
+        };
+
+        try {
+            if (currentSubscription.id === 'New') {
+                const { data } = await api.post('/subscriptions', payload);
+                // Ideally refresh from backend, but optimistic update for speed
+                const newSub = {
+                    ...currentSubscription,
+                    id: `S${String(data.id).padStart(4, '0')}`,
+                    recurring: `$${recurringAmount.toFixed(2)}`,
+                    status: 'Quotation'
+                };
+                setSubscriptions([newSub, ...subscriptions]);
+            } else {
+                await api.put(`/subscriptions/${currentSubscription.id}`, payload);
+                const updatedSub = {
+                    ...currentSubscription,
+                    recurring: `$${recurringAmount.toFixed(2)}`
+                };
+                setSubscriptions(subscriptions.map(s => s.id === currentSubscription.id ? updatedSub : s));
+            }
+            setView('list');
+        } catch (error) {
+            console.error('Failed to save subscription', error);
+            alert('Failed to save subscription');
         }
-        setView('list');
+    };
+
+    const handleStatusUpdate = async (status) => {
+        if (!currentSubscription || currentSubscription.id === 'New') return;
+        try {
+            await api.patch(`/subscriptions/${currentSubscription.id}/status`, { status });
+            const updatedSub = { ...currentSubscription, status };
+            setCurrentSubscription(updatedSub);
+            setSubscriptions(subscriptions.map(s => s.id === currentSubscription.id ? updatedSub : s));
+        } catch (error) {
+            console.error(`Failed to update status to ${status}`, error);
+            alert(`Failed to update status`);
+        }
     };
 
     const handleSend = () => {
         if (!validateForm()) return;
-        const updatedSub = { ...currentSubscription, status: 'Quotation Sent' };
-        setCurrentSubscription(updatedSub);
-        setSubscriptions(subscriptions.map(s => s.id === currentSubscription.id ? updatedSub : s));
+        handleStatusUpdate('Quotation Sent');
     };
 
     const handleConfirm = () => {
         if (!validateForm()) return;
-        const updatedSub = { ...currentSubscription, status: 'Confirmed' };
-        setCurrentSubscription(updatedSub);
-        setSubscriptions(subscriptions.map(s => s.id === currentSubscription.id ? updatedSub : s));
+        handleStatusUpdate('Confirmed');
     };
 
     const handleRenew = () => {
@@ -180,16 +232,12 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
 
     const handleCancel = () => {
         if (window.confirm('Are you sure you want to cancel this subscription?')) {
-            const updatedSub = { ...currentSubscription, status: 'Churned' };
-            setCurrentSubscription(updatedSub);
-            setSubscriptions(subscriptions.map(s => s.id === currentSubscription.id ? updatedSub : s));
+            handleStatusUpdate('Churned'); // Or Cancelled
         }
     };
 
     const handleClose = () => {
-        const updatedSub = { ...currentSubscription, status: 'Closed' };
-        setCurrentSubscription(updatedSub);
-        setSubscriptions(subscriptions.map(s => s.id === currentSubscription.id ? updatedSub : s));
+        handleStatusUpdate('Closed');
         setView('list');
     };
 
@@ -346,7 +394,30 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
                                         <tbody className="divide-y divide-[#dbe6de] dark:divide-[#2a4531]">
                                             {currentSubscription.orderLines.map((line, idx) => (
                                                 <tr key={idx} className="bg-white dark:bg-[#1a2e1f]">
-                                                    <td className="px-4 py-3">{line.product}</td>
+                                                    <td className="px-4 py-3">
+                                                        <select
+                                                            className="w-full rounded border border-[#dbe6de] dark:border-[#3a5840] bg-transparent px-2 py-1 text-sm focus:ring-primary focus:border-primary"
+                                                            value={line.productId || ''}
+                                                            onChange={(e) => {
+                                                                const prodId = parseInt(e.target.value);
+                                                                const prod = products.find(p => p.id === prodId);
+                                                                if (prod) {
+                                                                    const newLines = [...currentSubscription.orderLines];
+                                                                    newLines[idx].product = prod.name;
+                                                                    newLines[idx].productId = prod.id;
+                                                                    newLines[idx].unitPrice = prod.price;
+                                                                    newLines[idx].quantity = 1;
+                                                                    newLines[idx].subtotal = prod.price;
+                                                                    setCurrentSubscription({ ...currentSubscription, orderLines: newLines });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <option value="">Select Product</option>
+                                                            {products?.map(p => (
+                                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
                                                     <td className="px-4 py-3"><input type="number" className="w-20 rounded border border-[#dbe6de] dark:border-[#3a5840] bg-transparent px-2 py-1 text-sm focus:ring-primary focus:border-primary" value={line.quantity} onChange={(e) => { const newLines = [...currentSubscription.orderLines]; newLines[idx].quantity = parseFloat(e.target.value) || 0; const base = newLines[idx].quantity * newLines[idx].unitPrice; newLines[idx].subtotal = (base * (1 - (newLines[idx].discount || 0) / 100)).toFixed(2); setCurrentSubscription({ ...currentSubscription, orderLines: newLines }); }} /></td>
                                                     <td className="px-4 py-3">${line.unitPrice}</td>
                                                     <td className="px-4 py-3"><input type="number" className="w-20 rounded border border-[#dbe6de] dark:border-[#3a5840] bg-transparent px-2 py-1 text-sm focus:ring-primary focus:border-primary" value={line.discount || 0} onChange={(e) => { const newLines = [...currentSubscription.orderLines]; newLines[idx].discount = parseFloat(e.target.value) || 0; const base = newLines[idx].quantity * newLines[idx].unitPrice; newLines[idx].subtotal = (base * (1 - (newLines[idx].discount || 0) / 100)).toFixed(2); setCurrentSubscription({ ...currentSubscription, orderLines: newLines }); }} /></td>
@@ -355,7 +426,7 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
                                                     <td className="px-4 py-3 text-center"><button className="text-gray-400 hover:text-red-500 transition-colors" onClick={() => { const newLines = currentSubscription.orderLines.filter((_, i) => i !== idx); setCurrentSubscription({ ...currentSubscription, orderLines: newLines }); }}><span className="material-symbols-outlined text-[18px]">delete</span></button></td>
                                                 </tr>
                                             ))}
-                                            <tr><td colSpan="7" className="px-4 py-3 text-primary hover:underline cursor-pointer font-medium" onClick={() => { const newLines = [...currentSubscription.orderLines, { product: 'New Product', quantity: 1, unitPrice: 0, discount: 0, taxes: 0, subtotal: 0 }]; setCurrentSubscription({ ...currentSubscription, orderLines: newLines }); }}>Add a line</td></tr>
+                                            <tr><td colSpan="7" className="px-4 py-3 text-primary hover:underline cursor-pointer font-medium" onClick={() => { const newLines = [...currentSubscription.orderLines, { product: '', productId: null, quantity: 1, unitPrice: 0, discount: 0, taxes: 0, subtotal: 0 }]; setCurrentSubscription({ ...currentSubscription, orderLines: newLines }); }}>Add a line</td></tr>
                                         </tbody>
                                     </table>
                                 </div>

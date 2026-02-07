@@ -1,15 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PortalHeader from './components/PortalHeader';
+import api from './api';
 
 const UserDetailsPage = () => {
     const themeColor = '#2ecc71';
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        name: 'Gemini User',
-        email: 'user@example.com',
-        phone: '+91 98765 43210',
-        company: 'Gemini Tech Solutions',
-        address: '123 Tech Park, Sector 5\nNew City, 500081\nIndia'
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        address: ''
     });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                navigate('/login');
+                return;
+            }
+            try {
+                const { data } = await api.get('/auth/me');
+                setFormData({
+                    name: data.name || '',
+                    email: data.email || '',
+                    phone: data.phone || '',
+                    company: data.company || '',
+                    address: data.address || ''
+                });
+            } catch (error) {
+                console.error("Failed to fetch profile", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, [navigate]);
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await api.put('/auth/profile', formData);
+            alert('Profile updated successfully!');
+        } catch (error) {
+            console.error("Failed to update profile", error);
+            alert('Failed to update profile');
+        }
+    };
 
     const styles = {
         container: {
@@ -97,80 +141,83 @@ const UserDetailsPage = () => {
             fontWeight: '900',
             cursor: 'pointer',
             marginTop: '16px',
-            width: 'fit-content',
-            transition: 'all 0.2s',
-            boxShadow: '0 8px 30px rgba(46,204,113,0.2)',
-        }
+            width: 'fit-content', // Changed to match previous style potentially
+        } // Closing missing from original snippet but added here for safety if passing full object
     };
+
+    if (loading) return <div className="p-10 text-center">Loading...</div>;
 
     return (
         <div style={styles.container}>
             <PortalHeader themeColor={themeColor} />
-
             <div style={styles.mainWrapper}>
                 <div style={styles.headerRow}>
-                    <h1 style={styles.title}>Account Settings</h1>
-                    <p style={styles.subtitle}>Manage your profile details and billing preferences.</p>
+                    <h1 style={styles.title}>My Account</h1>
+                    <p style={styles.subtitle}>Update your personal details and billing information.</p>
                 </div>
 
-                <div style={styles.formGrid}>
+                <form onSubmit={handleSubmit} style={styles.formGrid}>
                     <div style={styles.fieldGroup}>
                         <label style={styles.label}>Full Name</label>
                         <input
                             style={styles.input}
+                            type="text"
+                            name="name"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            onFocus={(e) => { e.target.style.borderColor = themeColor; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(46,204,113,0.1)'; }}
-                            onBlur={(e) => { e.target.style.borderColor = '#dbe6de'; e.target.style.backgroundColor = '#f8faf9'; e.target.style.boxShadow = 'none'; }}
-                        />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Email (Permanent)</label>
-                        <input
-                            style={{ ...styles.input, opacity: 0.6, cursor: 'not-allowed', backgroundColor: '#f0f2f0' }}
-                            value={formData.email}
-                            disabled
-                        />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Contact Number</label>
-                        <input
-                            style={styles.input}
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            onFocus={(e) => { e.target.style.borderColor = themeColor; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(46,204,113,0.1)'; }}
-                            onBlur={(e) => { e.target.style.borderColor = '#dbe6de'; e.target.style.backgroundColor = '#f8faf9'; e.target.style.boxShadow = 'none'; }}
-                        />
-                    </div>
-                    <div style={styles.fieldGroup}>
-                        <label style={styles.label}>Organization</label>
-                        <input
-                            style={styles.input}
-                            value={formData.company}
-                            onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                            onFocus={(e) => { e.target.style.borderColor = themeColor; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(46,204,113,0.1)'; }}
-                            onBlur={(e) => { e.target.style.borderColor = '#dbe6de'; e.target.style.backgroundColor = '#f8faf9'; e.target.style.boxShadow = 'none'; }}
-                        />
-                    </div>
-                    <div style={{ ...styles.fieldGroup, gridColumn: 'span 2' }}>
-                        <label style={styles.label}>Shipping Address</label>
-                        <textarea
-                            style={styles.textarea}
-                            value={formData.address}
-                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                            onFocus={(e) => { e.target.style.borderColor = themeColor; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(46,204,113,0.1)'; }}
-                            onBlur={(e) => { e.target.style.borderColor = '#dbe6de'; e.target.style.backgroundColor = '#f8faf9'; e.target.style.boxShadow = 'none'; }}
+                            onChange={handleChange}
                         />
                     </div>
 
-                    <button
-                        style={styles.saveButton}
-                        onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-                        onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
-                    >
-                        Save Changes
-                    </button>
-                </div>
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Email Address</label>
+                        <input
+                            style={styles.input}
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            disabled
+                        />
+                    </div>
+
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Phone Number</label>
+                        <input
+                            style={styles.input}
+                            type="text"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                        />
+                    </div>
+
+                    <div style={styles.fieldGroup}>
+                        <label style={styles.label}>Company</label>
+                        <input
+                            style={styles.input}
+                            type="text"
+                            name="company"
+                            value={formData.company}
+                            onChange={handleChange}
+                        />
+                    </div>
+
+                    <div style={{ ...styles.fieldGroup, gridColumn: '1 / -1' }}>
+                        <label style={styles.label}>Billing Address</label>
+                        <textarea
+                            style={styles.textarea}
+                            name="address"
+                            value={formData.address}
+                            onChange={handleChange}
+                        />
+                    </div>
+
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center' }}>
+                        <button type="submit" style={styles.saveButton}>
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

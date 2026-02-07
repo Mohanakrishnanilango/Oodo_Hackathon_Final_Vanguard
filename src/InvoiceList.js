@@ -75,6 +75,12 @@ const InvoiceList = ({ initialInvoice, invoices, onStatusChange, onNew }) => {
                                     Confirmed
                                 </div>
                                 <button
+                                    onClick={() => handleStatusUpdate(selectedInvoice.id, 'Paid')}
+                                    className="bg-[#2ecc71] hover:bg-[#27ae60] text-white font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"
+                                >
+                                    Mark as Paid
+                                </button>
+                                <button
                                     onClick={() => handleStatusUpdate(selectedInvoice.id, 'Cancelled')}
                                     className="border border-red-200 text-red-600 hover:bg-red-50 py-2 px-6 rounded-lg font-bold transition-colors"
                                 >

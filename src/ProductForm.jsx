@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from './api';
 import RecurringPricesTable from './RecurringPricesTable';
 import VariantsTable from './VariantsTable';
 
@@ -30,24 +31,32 @@ const ProductForm = ({ onSave, onDiscard }) => {
         setFormData(prev => ({ ...prev, variants: newVariants }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!formData.productName.trim()) {
-            alert('the field must be filled');
+            alert('Product Name must be filled');
             return;
         }
 
-        const newProduct = {
-            id: `PROD${Math.floor(Math.random() * 1000)}`,
+        const payload = {
             name: formData.productName,
+            type: formData.productType,
             price: parseFloat(formData.salesPrice) || 0,
             cost: parseFloat(formData.costPrice) || 0,
-            type: formData.productType,
-            recurringPrices: formData.recurringPrices,
-            variants: formData.variants
+            description: '', // Add description field if needed
+            is_active: true
+            // recurringPrices and variants are not yet supported by backend schema fully (simple schema), 
+            // but we can just ignore them for now or store in description if JSON.
+            // For now, only core fields.
         };
 
-        if (onSave) {
-            onSave(newProduct);
+        try {
+            const { data } = await api.post('/products', payload);
+            if (onSave) {
+                onSave(data);
+            }
+        } catch (error) {
+            console.error('Failed to create product', error);
+            alert('Failed to create product');
         }
     };
 
