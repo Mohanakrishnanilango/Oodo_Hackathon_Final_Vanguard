@@ -1,32 +1,26 @@
 import React, { useState } from 'react';
 
-// Mock Customer Data
-const mockCustomers = [
-    { id: 'C001', name: 'Acme Corp', email: 'contact@acmecorp.com', phone: '+1 555-0101', subscriptions: 1, totalRevenue: '$1,680.00', status: 'Active' },
-    { id: 'C002', name: 'Globex Inc', email: 'info@globexinc.com', phone: '+1 555-0102', subscriptions: 1, totalRevenue: '$1,392.00', status: 'Churned' },
-    { id: 'C003', name: 'Soylent Corp', email: 'sales@soylentcorp.com', phone: '+1 555-0103', subscriptions: 1, totalRevenue: '$0.00', status: 'Prospect' },
-    { id: 'C004', name: 'Umbrella Corp', email: 'research@umbrella.com', phone: '+1 555-0104', subscriptions: 1, totalRevenue: '$5,000.00', status: 'Active' },
-    { id: 'C005', name: 'Cyberdyne Systems', email: 'skynet@cyberdyne.com', phone: '+1 555-0105', subscriptions: 1, totalRevenue: '$0.00', status: 'Active' },
-    { id: 'C006', name: 'Stark Industries', email: 'tony@stark.com', phone: '+1 555-0106', subscriptions: 0, totalRevenue: '$0.00', status: 'Prospect' },
-    { id: 'C007', name: 'Wayne Enterprises', email: 'bruce@wayne.com', phone: '+1 555-0107', subscriptions: 0, totalRevenue: '$0.00', status: 'Prospect' }
-];
-
-const CustomerList = () => {
+const CustomerList = ({ customers, onNew, userRole }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredCustomers = mockCustomers.filter(customer =>
+    const filteredCustomers = (customers || []).filter(customer =>
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 animate-fade-in">
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 items-center bg-white dark:bg-[#1a2e1f] p-4 rounded-xl shadow-sm border border-[#dbe6de] dark:border-[#2a4531]">
                 <div className="flex items-center gap-2">
-                    <button className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors">
-                        New Customer
-                    </button>
+                    {userRole !== 'internal' && (
+                        <button
+                            onClick={onNew}
+                            className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"
+                        >
+                            New Customer
+                        </button>
+                    )}
                 </div>
 
                 <div className="relative w-full sm:w-auto">
@@ -72,8 +66,8 @@ const CustomerList = () => {
                                     <td className="px-6 py-4 font-medium text-[#111813] dark:text-white">{customer.totalRevenue}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${customer.status === 'Active' ? 'bg-green-100 text-green-700' :
-                                                customer.status === 'Churned' ? 'bg-red-100 text-red-700' :
-                                                    'bg-gray-100 text-gray-700'
+                                            customer.status === 'Churned' ? 'bg-red-100 text-red-700' :
+                                                'bg-gray-100 text-gray-700'
                                             }`}>
                                             {customer.status}
                                         </span>

@@ -21,10 +21,12 @@ const Login = () => {
 
         // Simple mock authentication logic
         if (loginEmail.toLowerCase() === 'internal@test.com') {
-            navigate('/internal-dashboard');
+            navigate('/', { state: { userRole: 'internal' } });
+        } else if (loginEmail.toLowerCase() === 'portal@test.com') {
+            navigate('/portal/home', { state: { userRole: 'portal' } });
         } else {
             // Default behavior for other users (e.g. admin or customers)
-            navigate('/');
+            navigate('/', { state: { userRole: 'admin' } });
         }
     };
 

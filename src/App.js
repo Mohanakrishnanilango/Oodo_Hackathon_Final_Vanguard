@@ -3,7 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './Login';
 import ForgetPassword from './ForgetPassword';
 import InternalUserDashboard from './InternalUserDashboard';
-import Home from './Home';
+import PortalHomePage from './PortalHomePage';
+import ShopPage from './ShopPage';
+import CartPage from './CartPage';
+import UserDetailsPage from './UserDetailsPage';
+import OrdersPage from './OrdersPage';
+import OrderPage from './OrderPage';
+import InvoicePage from './InvoicePage';
+import ProductPage from './ProductPage';
 import './App.css';
 
 function App() {
@@ -13,10 +20,21 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/forget-password" element={<ForgetPassword />} />
-          <Route path="/internal-dashboard" element={<InternalUserDashboard />} />
-          <Route path="/" element={<Home />} />
-          {/* Redirect any unknown route to login, or home if you prefer */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<InternalUserDashboard />} />
+          {/* <Route path="/home-alternate" element={<Home />} /> */}
+
+          {/* Portal User Routes */}
+          <Route path="/portal/home" element={<PortalHomePage />} />
+          <Route path="/portal/shop" element={<ShopPage />} />
+          <Route path="/portal/cart" element={<CartPage />} />
+          <Route path="/portal/account" element={<UserDetailsPage />} />
+          <Route path="/portal/orders" element={<OrdersPage />} />
+          <Route path="/portal/order/:id" element={<OrderPage />} />
+          <Route path="/portal/invoices" element={<InvoicePage />} />
+          <Route path="/portal/product/:id" element={<ProductPage />} />
+
+          {/* Redirect any unknown route to the dashboard */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>

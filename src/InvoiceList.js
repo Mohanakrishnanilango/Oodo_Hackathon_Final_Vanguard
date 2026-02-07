@@ -1,106 +1,183 @@
 import React, { useState } from 'react';
 
-// Mock Invoice Data with Payment History
-const mockInvoices = [
-    {
-        id: 'INV/2026/001',
-        customer: 'Acme Corp',
-        subscription: 'S0001',
-        date: 'Jan 14, 2026',
-        dueDate: 'Jan 29, 2026',
-        amount: '$140.00',
-        status: 'Paid',
-        paymentHistory: [
-            { date: 'Jan 15, 2026', method: 'Credit Card', reference: 'PAY/2026/001', amount: '$140.00' }
-        ]
-    },
-    {
-        id: 'INV/2025/128',
-        customer: 'Acme Corp',
-        subscription: 'S0001',
-        date: 'Dec 14, 2025',
-        dueDate: 'Dec 29, 2025',
-        amount: '$140.00',
-        status: 'Paid',
-        paymentHistory: [
-            { date: 'Dec 16, 2025', method: 'Bank Transfer', reference: 'PAY/2025/128', amount: '$140.00' }
-        ]
-    },
-    {
-        id: 'INV/2026/005',
-        customer: 'Globex Inc',
-        subscription: 'S0002',
-        date: 'Jan 18, 2026',
-        dueDate: 'Feb 02, 2026',
-        amount: '$116.00',
-        status: 'Overdue',
-        paymentHistory: []
-    },
-    {
-        id: 'INV/2025/142',
-        customer: 'Globex Inc',
-        subscription: 'S0002',
-        date: 'Dec 18, 2025',
-        dueDate: 'Jan 02, 2026',
-        amount: '$116.00',
-        status: 'Paid',
-        paymentHistory: [
-            { date: 'Dec 20, 2025', method: 'Credit Card', reference: 'PAY/2025/142', amount: '$116.00' }
-        ]
-    },
-    {
-        id: 'INV/2025/055',
-        customer: 'Umbrella Corp',
-        subscription: 'S0004',
-        date: 'Mar 01, 2025',
-        dueDate: 'Apr 30, 2025',
-        amount: '$5,000.00',
-        status: 'Paid',
-        paymentHistory: [
-            { date: 'Apr 15, 2025', method: 'Wire Transfer', reference: 'PAY/2025/055', amount: '$5,000.00' }
-        ]
-    },
-    {
-        id: 'INV/2026/012',
-        customer: 'Soylent Corp',
-        subscription: 'S0003',
-        date: 'Feb 10, 2026',
-        dueDate: 'Mar 12, 2026',
-        amount: '$230.00',
-        status: 'Draft',
-        paymentHistory: []
-    },
-    {
-        id: 'INV/2026/018',
-        customer: 'Cyberdyne Systems',
-        subscription: 'S0005',
-        date: 'Jan 28, 2026',
-        dueDate: 'Feb 12, 2026',
-        amount: '$999.00',
-        status: 'Sent',
-        paymentHistory: []
-    }
-];
-
-const InvoiceList = () => {
+const InvoiceList = ({ initialInvoice, invoices, onStatusChange, onNew }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [view, setView] = useState('list'); // 'list' or 'detail'
 
-    const filteredInvoices = mockInvoices.filter(invoice =>
+    // Handle deep link from Subscription Manager
+    React.useEffect(() => {
+        if (initialInvoice) {
+            setSelectedInvoice(initialInvoice);
+            setView('detail');
+        }
+    }, [initialInvoice]);
+
+    const filteredInvoices = (invoices || []).filter(invoice =>
         invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.customer.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleRowClick = (invoice) => {
-        setSelectedInvoice(selectedInvoice?.id === invoice.id ? null : invoice);
+        setSelectedInvoice(invoice);
+        setView('detail');
     };
 
-    return (
+    const handleStatusUpdate = (id, newStatus) => {
+        if (onStatusChange) {
+            onStatusChange(id, newStatus);
+        }
+        setSelectedInvoice(prev => prev ? { ...prev, status: newStatus } : null);
+    };
+
+    const renderDetailView = () => {
+        if (!selectedInvoice) return null;
+
+        return (
+            <div className="bg-white dark:bg-[#1a2e1f] rounded-xl shadow-sm border border-[#dbe6de] dark:border-[#2a4531] overflow-hidden animate-fade-in">
+                {/* Header/Actions */}
+                <div className="p-6 border-b border-[#dbe6de] dark:border-[#2a4531] flex flex-wrap justify-between items-center gap-4 bg-gray-50/50 dark:bg-[#2a4531]/10">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setView('list')}
+                            className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <span className="material-symbols-outlined">arrow_back</span>
+                        </button>
+                        <div>
+                            <h2 className="text-2xl font-bold text-[#111813] dark:text-white">{selectedInvoice.id}</h2>
+                            <p className="text-sm text-[#61896b]">{selectedInvoice.customer}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {selectedInvoice.status === 'Draft' && (
+                            <>
+                                <button
+                                    onClick={() => handleStatusUpdate(selectedInvoice.id, 'Confirmed')}
+                                    className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"
+                                >
+                                    Confirm
+                                </button>
+                                <button
+                                    onClick={() => handleStatusUpdate(selectedInvoice.id, 'Cancelled')}
+                                    className="border border-red-200 text-red-600 hover:bg-red-50 py-2 px-6 rounded-lg font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        )}
+
+                        {selectedInvoice.status === 'Confirmed' && (
+                            <>
+                                <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-bold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                    Confirmed
+                                </div>
+                                <button
+                                    onClick={() => handleStatusUpdate(selectedInvoice.id, 'Cancelled')}
+                                    className="border border-red-200 text-red-600 hover:bg-red-50 py-2 px-6 rounded-lg font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        )}
+
+                        {selectedInvoice.status === 'Cancelled' && (
+                            <>
+                                <div className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-bold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                    Cancelled
+                                </div>
+                                <button
+                                    onClick={() => handleStatusUpdate(selectedInvoice.id, 'Draft')}
+                                    className="border border-primary text-primary hover:bg-primary/5 py-2 px-6 rounded-lg font-bold transition-colors"
+                                >
+                                    Reset to Draft
+                                </button>
+                            </>
+                        )}
+
+                        {/* Standard statuses (Paid, etc) */}
+                        {!['Draft', 'Confirmed', 'Cancelled'].includes(selectedInvoice.status) && (
+                            <span className={`px-4 py-2 rounded-lg font-bold text-sm ${selectedInvoice.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                {selectedInvoice.status}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+                        <div className="space-y-6">
+                            <div>
+                                <label className="text-xs font-bold text-[#61896b] uppercase tracking-wider">Customer</label>
+                                <p className="text-lg font-semibold text-[#111813] dark:text-white">{selectedInvoice.customer}</p>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-[#61896b] uppercase tracking-wider">Subscription Reference</label>
+                                <p className="text-[#111813] dark:text-white">{selectedInvoice.subscription}</p>
+                            </div>
+                        </div>
+                        <div className="space-y-6">
+                            <div className="flex justify-between border-b border-[#dbe6de] dark:border-[#2a4531] pb-2">
+                                <label className="text-sm text-[#61896b]">Invoice Date</label>
+                                <p className="text-sm font-medium dark:text-white">{selectedInvoice.date}</p>
+                            </div>
+                            <div className="flex justify-between border-b border-[#dbe6de] dark:border-[#2a4531] pb-2">
+                                <label className="text-sm text-[#61896b]">Due Date</label>
+                                <p className="text-sm font-medium dark:text-white">{selectedInvoice.dueDate}</p>
+                            </div>
+                            <div className="flex justify-between items-center pt-2">
+                                <label className="text-lg font-bold text-[#111813] dark:text-white">Amount Due</label>
+                                <p className="text-2xl font-black text-primary">{selectedInvoice.amount}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {selectedInvoice.paymentHistory && selectedInvoice.paymentHistory.length > 0 && (
+                        <div>
+                            <h3 className="text-lg font-bold text-[#111813] dark:text-white mb-4">Payment Transactions</h3>
+                            <div className="border border-[#dbe6de] dark:border-[#2a4531] rounded-lg overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 dark:bg-[#2a4531]/30 text-[#61896b] font-semibold">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left">Date</th>
+                                            <th className="px-4 py-3 text-left">Method</th>
+                                            <th className="px-4 py-3 text-left">Reference</th>
+                                            <th className="px-4 py-3 text-right">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#dbe6de] dark:divide-[#2a4531]">
+                                        {selectedInvoice.paymentHistory.map((payment, idx) => (
+                                            <tr key={idx}>
+                                                <td className="px-4 py-3 dark:text-white">{payment.date}</td>
+                                                <td className="px-4 py-3 text-[#61896b]">{payment.method}</td>
+                                                <td className="px-4 py-3 font-medium text-primary">{payment.reference}</td>
+                                                <td className="px-4 py-3 text-right font-bold dark:text-white">{payment.amount}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    const renderListView = () => (
         <div className="flex flex-col gap-4">
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 items-center bg-white dark:bg-[#1a2e1f] p-4 rounded-xl shadow-sm border border-[#dbe6de] dark:border-[#2a4531]">
                 <div className="flex items-center gap-2">
-                    <button className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors">
+                    <button
+                        onClick={onNew}
+                        className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"
+                    >
                         New Invoice
                     </button>
                 </div>
@@ -136,57 +213,29 @@ const InvoiceList = () => {
                         </thead>
                         <tbody className="divide-y divide-[#dbe6de] dark:divide-[#2a4531]">
                             {filteredInvoices.map((invoice) => (
-                                <React.Fragment key={invoice.id}>
-                                    <tr
-                                        className="hover:bg-gray-50 dark:hover:bg-[#2a4531]/20 cursor-pointer transition-colors"
-                                        onClick={() => handleRowClick(invoice)}
-                                    >
-                                        <td className="px-6 py-4 font-medium text-primary hover:underline">{invoice.id}</td>
-                                        <td className="px-6 py-4 text-[#111813] dark:text-[#e0e7e1]">{invoice.customer}</td>
-                                        <td className="px-6 py-4 text-[#61896b] dark:text-[#a0cfa5]">{invoice.subscription}</td>
-                                        <td className="px-6 py-4 text-[#61896b] dark:text-[#a0cfa5]">{invoice.date}</td>
-                                        <td className="px-6 py-4 text-[#61896b] dark:text-[#a0cfa5]">{invoice.dueDate}</td>
-                                        <td className="px-6 py-4 font-medium text-[#111813] dark:text-white">{invoice.amount}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${invoice.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                                                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-700' :
-                                                        invoice.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                                <tr
+                                    key={invoice.id}
+                                    className="hover:bg-gray-50 dark:hover:bg-[#2a4531]/20 cursor-pointer transition-colors"
+                                    onClick={() => handleRowClick(invoice)}
+                                >
+                                    <td className="px-6 py-4 font-medium text-primary hover:underline">{invoice.id}</td>
+                                    <td className="px-6 py-4 text-[#111813] dark:text-[#e0e7e1]">{invoice.customer}</td>
+                                    <td className="px-6 py-4 text-[#61896b] dark:text-[#a0cfa5]">{invoice.subscription}</td>
+                                    <td className="px-6 py-4 text-[#61896b] dark:text-[#a0cfa5]">{invoice.date}</td>
+                                    <td className="px-6 py-4 text-[#61896b] dark:text-[#a0cfa5]">{invoice.dueDate}</td>
+                                    <td className="px-6 py-4 font-medium text-[#111813] dark:text-white">{invoice.amount}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${invoice.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                                            invoice.status === 'Overdue' ? 'bg-red-100 text-red-700' :
+                                                invoice.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                                                    invoice.status === 'Cancelled' ? 'bg-red-50 text-red-500' :
+                                                        invoice.status === 'Confirmed' ? 'bg-green-50 text-green-600' :
                                                             'bg-gray-100 text-gray-700'
-                                                }`}>
-                                                {invoice.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {selectedInvoice?.id === invoice.id && invoice.paymentHistory.length > 0 && (
-                                        <tr>
-                                            <td colSpan="7" className="px-6 py-4 bg-gray-50 dark:bg-[#15251a]">
-                                                <div className="ml-8">
-                                                    <h4 className="text-sm font-semibold text-[#111813] dark:text-white mb-3">Payment History</h4>
-                                                    <table className="w-full text-sm">
-                                                        <thead className="text-[#61896b] text-xs">
-                                                            <tr>
-                                                                <th className="px-4 py-2 text-left">Date</th>
-                                                                <th className="px-4 py-2 text-left">Method</th>
-                                                                <th className="px-4 py-2 text-left">Reference</th>
-                                                                <th className="px-4 py-2 text-right">Amount</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {invoice.paymentHistory.map((payment, idx) => (
-                                                                <tr key={idx} className="border-t border-[#dbe6de] dark:border-[#2a4531]">
-                                                                    <td className="px-4 py-2 text-[#111813] dark:text-white">{payment.date}</td>
-                                                                    <td className="px-4 py-2 text-[#61896b]">{payment.method}</td>
-                                                                    <td className="px-4 py-2 text-primary font-medium">{payment.reference}</td>
-                                                                    <td className="px-4 py-2 text-right text-[#111813] dark:text-white font-medium">{payment.amount}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </React.Fragment>
+                                            }`}>
+                                            {invoice.status}
+                                        </span>
+                                    </td>
+                                </tr>
                             ))}
                         </tbody>
                     </table>
@@ -195,6 +244,12 @@ const InvoiceList = () => {
                     <div className="p-8 text-center text-[#61896b]">No invoices found.</div>
                 )}
             </div>
+        </div>
+    );
+
+    return (
+        <div className="animate-fade-in">
+            {view === 'list' ? renderListView() : renderDetailView()}
         </div>
     );
 };
