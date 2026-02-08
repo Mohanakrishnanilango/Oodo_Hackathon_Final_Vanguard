@@ -1,0 +1,43 @@
+# Project Changes Log
+
+## [2026-02-08]
+### Shop Page Enhancements
+- Replaced static category text with interactive toggle buttons and filtering logic.
+- Added hover overlays to product cards with "Buy Now" and "Add Cart" actions.
+- Integrated product images (mock) into the marketplace grid.
+
+### Checkout Flow Implementation
+- Enhanced `CartPage.jsx` with a multi-step checkout: Review -> Shipping -> Payment.
+- In Shipping: Added detailed billing summary and tax calculation (12% GST).
+- In Payment: Implemented a GPay QR mockup with a 5-second automatic verification timer.
+- Added "Order completing..." transition state before navigating to order history.
+### [2026-02-08] Refinements
+- **Guided Checkout**: Locked Shipping and Payment tabs in `CartPage.jsx` until previous steps are completed.
+- **Dynamic Header**: Implemented real-time cart count in `PortalHeader.jsx` using a custom event listener (`cartUpdate`).
+- **Shop UI Cleanup**: Removed the redundant category dropdown from `ShopPage.jsx` and added a visual active-category label.
+- **Cart Sync**: All cart additions and removals now trigger a header refresh.
+### [2026-02-08] UI Polish & Sorting
+- **Functional Sorting**: Implemented "Price: Low to High", "Price: High to Low", and "Newest Arrivals" logic in the Shop.
+- **Improved Visuals**: Upgraded product placeholders with high-quality, domain-specific technology images from Unsplash.
+- **Black Text Theme**: Standardized all primary and descriptive text to pure black (#000000) for enhanced clarity and contrast.
+- **Dropdown Refinement**: Updated the sort dropdown to be fully interactive and visually consistent with the new theme.
+
+### [2026-02-08] Product Detail Transition
+- **Removed Hover Actions**: The product grid no longer displays action buttons on hover, favoring a cleaner browsing experience.
+- **Dedicated Detail View**: Clicking a product now opens a comprehensive detail section with high-quality imagery and descriptions.
+- **Subscription Tier Selection**: Integrated tiered plan selection: Weekly (Standard), Monthly (Premium), and Yearly (Premium Pro) with dynamic pricing.
+- **Action Migration**: Relocated "Buy Now" and "Add Cart" buttons to the detailed view for context-aware purchasing.
+
+### [2026-02-08] Bug Fixes & Content Cleanup
+- **Cart Progression Validation**: Fixed a bug where users could navigate to Shipping/Payment pages even with an empty cart. Integrated strict validation to block progression.
+- **Visual Content Refresh**: Replaced all human-centric product images with strictly non-living technology visuals (servers, code, microchips) to maintain a professional, corporate SaaS aesthetic.
+
+### [2026-02-08] Product Page Migration
+- **Architectural Shift**: Transitioned from an inline product detail view in `ShopPage.jsx` to a standalone `ProductPage.jsx`.
+- **Dynamic Routing**: Enabled `/portal/product/:id` routing to handle specific product deep-links.
+- **Subscription Porting**: Migrated the Weekly/Monthly/Yearly subscription logic to the dedicated page.
+- **Visual Consistency**: Applied the professional non-living tech imagery and pure black text theme to the new standalone page.
+
+### [2026-02-08] Cart Sync & Coupon Validation
+- **Cart Persistence Fix**: Migrated `CartPage.jsx` from backend API to `localStorage` synchronization. This ensures that adding or removing products works consistently across the entire application.
+- **Strict Coupon Logic**: Implemented validation for coupon codes. Only `FIRST`, `SECOND`, and `THIRD` are now accepted; empty or invalid codes are rejected with a user notification.

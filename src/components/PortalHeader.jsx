@@ -1,9 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api';
+import { getStoredUser, logout } from '../authService';
 
 const PortalHeader = ({ themeColor = '#2ecc71' }) => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
     const navigate = useNavigate();
+    const user = getStoredUser();
+
+    const fetchCartCount = () => {
+        try {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            setCartCount(cart.length);
+        } catch (error) {
+            console.error("Failed to fetch cart count", error);
+        }
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    useEffect(() => {
+        fetchCartCount();
+        window.addEventListener('cartUpdate', fetchCartCount);
+        return () => window.removeEventListener('cartUpdate', fetchCartCount);
+    }, []);
 
     const styles = {
         navbar: {
@@ -38,7 +62,7 @@ const PortalHeader = ({ themeColor = '#2ecc71' }) => {
         },
         navItem: {
             cursor: "pointer",
-            color: '#61896b',
+            color: '#000000',
             transition: 'color 0.2s',
         },
         rightNav: {
@@ -104,9 +128,9 @@ const PortalHeader = ({ themeColor = '#2ecc71' }) => {
             <div style={styles.leftNav}>
                 <div style={styles.logo} onClick={() => navigate('/portal/home')}>SAAS<span style={{ color: '#111813' }}>PORTAL</span></div>
                 <nav style={styles.navLinks}>
-                    <span style={styles.navItem} onClick={() => navigate('/portal/home')} onMouseOver={(e) => e.target.style.color = themeColor} onMouseOut={(e) => e.target.style.color = '#61896b'}>Home</span>
-                    <span style={styles.navItem} onClick={() => navigate('/portal/shop')} onMouseOver={(e) => e.target.style.color = themeColor} onMouseOut={(e) => e.target.style.color = '#61896b'}>Shop</span>
-                    <span style={styles.navItem} onClick={() => navigate('/portal/account')} onMouseOver={(e) => e.target.style.color = themeColor} onMouseOut={(e) => e.target.style.color = '#61896b'}>My Account</span>
+                    <span style={styles.navItem} onClick={() => navigate('/portal/home')} onMouseOver={(e) => e.target.style.color = themeColor} onMouseOut={(e) => e.target.style.color = '#000000'}>Home</span>
+                    <span style={styles.navItem} onClick={() => navigate('/portal/shop')} onMouseOver={(e) => e.target.style.color = themeColor} onMouseOut={(e) => e.target.style.color = '#000000'}>Shop</span>
+                    <span style={styles.navItem} onClick={() => navigate('/portal/account')} onMouseOver={(e) => e.target.style.color = themeColor} onMouseOut={(e) => e.target.style.color = '#000000'}>My Account</span>
                 </nav>
             </div>
 
@@ -118,7 +142,7 @@ const PortalHeader = ({ themeColor = '#2ecc71' }) => {
                     onMouseOver={(e) => { e.target.style.borderColor = themeColor; e.target.style.color = themeColor; }}
                     onMouseOut={(e) => { e.target.style.borderColor = '#dbe6de'; e.target.style.color = '#111813'; }}
                 >
-                    Cart (0)
+                    Cart ({cartCount})
                 </button>
 
                 <div style={{ position: "relative" }}>
@@ -152,8 +176,11 @@ const PortalHeader = ({ themeColor = '#2ecc71' }) => {
                             </button>
                             <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }}></div>
                             <button
-                                style={{ ...styles.dropdownItem, color: '#f44336' }}
-                                onClick={() => navigate('/login')}
+                                onClick={handleLogout}
+                                style={{
+                                    ...styles.dropdownItem, // Inherit base styles
+                                    color: '#ef4444', // Override color
+                                }}
                                 onMouseOver={(e) => e.target.style.backgroundColor = '#fff5f5'}
                                 onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
                             >

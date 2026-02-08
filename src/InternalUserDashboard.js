@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from './api';
+import { getStoredUser, logout } from './authService';
 import SubscriptionManager from './SubscriptionManager';
 import CustomerList from './CustomerList';
 import CustomerForm from './CustomerForm';
@@ -12,8 +13,18 @@ import PaymentHistory from './PaymentHistory';
 
 const InternalUserDashboard = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const userRole = location.state?.userRole || 'admin';
+    const user = getStoredUser();
+
+    // Fallback or early exit if no user
+    useEffect(() => {
+        if (!user) {
+            navigate('/login');
+        }
+    }, [user, navigate]);
+
+    const userRole = user?.role || 'admin';
+    const userName = user?.name || 'Internal User';
+    const userEmail = user?.email || '';
     const [activeTab, setActiveTab] = useState('dashboard');
     const [tabPayload, setTabPayload] = useState(null);
     const [subscriptions, setSubscriptions] = useState([]);
@@ -88,6 +99,7 @@ const InternalUserDashboard = () => {
     };
 
     const handleLogout = () => {
+        logout();
         navigate('/login');
     };
 
@@ -284,8 +296,8 @@ const InternalUserDashboard = () => {
                             <span className="material-symbols-outlined">person</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#111813] dark:text-white truncate">Admin User</p>
-                            <p className="text-xs text-[#61896b] truncate">internal@test.com</p>
+                            <p className="text-sm font-medium text-[#111813] dark:text-white truncate">{userName}</p>
+                            <p className="text-xs text-[#61896b] truncate">{userEmail}</p>
                         </div>
                     </div>
                     <button

@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 
-const API_URL = 'http://localhost:5003/api';
+const API_URL = 'http://localhost:3001/api';
 
 const checkLogin = async () => {
     try {

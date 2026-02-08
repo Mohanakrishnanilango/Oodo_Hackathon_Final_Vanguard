@@ -1,13 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PortalHeader from './components/PortalHeader';
+import api from './api';
 
 const ProductPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [selectedVariant, setSelectedVariant] = useState('Professional');
-    const [quantity, setQuantity] = useState(1);
+    const [product, setProduct] = useState(null);
+    const [selectedPlan, setSelectedPlan] = useState('monthly');
+    const [loading, setLoading] = useState(true);
     const themeColor = '#2ecc71';
+
+    const getDomainImage = (name, type) => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('cloud') || type === 'cloud') return `https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600&auto=format&fit=crop`;
+        if (lowerName.includes('software') || type === 'software') return `https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=600&auto=format&fit=crop`;
+        if (lowerName.includes('service') || type === 'service') return `https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=600&auto=format&fit=crop`;
+        if (lowerName.includes('infra') || type === 'infra') return `https://images.unsplash.com/photo-1558494949-ef010cbdcc51?q=80&w=600&auto=format&fit=crop`;
+        return `https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=600&auto=format&fit=crop`;
+    };
+
+    useEffect(() => {
+        const fetchProduct = async () => {
+            try {
+                const { data } = await api.get('/products');
+                const found = data.find(p => p.id === parseInt(id));
+                if (found) {
+                    setProduct({
+                        ...found,
+                        numericPrice: parseFloat(found.price),
+                        image: getDomainImage(found.name, found.type)
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch product detail", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProduct();
+    }, [id]);
+
+    const addToCart = (prod) => {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+
+        // Find if item already exists with the same plan
+        const existingItemIndex = cart.findIndex(item => item.id === prod.id && item.plan === selectedPlan);
+
+        if (existingItemIndex > -1) {
+            // Increment existing item quantity
+            cart[existingItemIndex].quantity += 1;
+            localStorage.setItem('cart', JSON.stringify(cart));
+            window.dispatchEvent(new Event('cartUpdate'));
+            alert(`${prod.name} (${selectedPlan}) quantity updated in cart!`);
+        } else {
+            // Add new item
+            const planPricing = {
+                weekly: (prod.numericPrice * 0.3),
+                monthly: prod.numericPrice,
+                yearly: (prod.numericPrice * 10)
+            };
+
+            const cartItem = {
+                id: prod.id,
+                cartItemId: Date.now() + Math.random(),
+                name: `${prod.name} (${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)})`,
+                price: planPricing[selectedPlan].toFixed(2),
+                quantity: 1,
+                image: prod.image,
+                plan: selectedPlan
+            };
+
+            localStorage.setItem('cart', JSON.stringify([...cart, cartItem]));
+            window.dispatchEvent(new Event('cartUpdate'));
+            alert('Added to cart!');
+        }
+    };
+
+    const handleBuyNow = (prod) => {
+        addToCart(prod);
+        navigate('/portal/cart');
+    };
 
     const styles = {
         container: {
@@ -150,12 +223,35 @@ const ProductPage = () => {
             transition: 'all 0.2s',
         },
         description: {
-            fontSize: '15px',
+            fontSize: '16px',
             lineHeight: '1.7',
             color: '#61896b',
             fontWeight: '500',
+        },
+        planCard: {
+            flex: 1,
+            padding: '16px',
+            borderRadius: '16px',
+            border: '2px solid #f0f2f0',
+            backgroundColor: '#ffffff',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            textAlign: 'center',
+        },
+        planCardActive: {
+            borderColor: themeColor,
+            backgroundColor: `${themeColor}08`,
         }
     };
+
+    if (loading) return <div style={{ padding: '100px', textAlign: 'center', fontWeight: 'bold' }}>Loading product...</div>;
+    if (!product) return <div style={{ padding: '100px', textAlign: 'center', fontWeight: 'bold' }}>Product not found.</div>;
+
+    const plans = [
+        { id: 'weekly', label: 'Weekly', sub: 'Standard', price: (product.numericPrice * 0.3).toFixed(2) },
+        { id: 'monthly', label: 'Monthly', sub: 'Premium', price: product.numericPrice.toFixed(2) },
+        { id: 'yearly', label: 'Yearly', sub: 'Premium Pro', price: (product.numericPrice * 10).toFixed(2) }
+    ];
 
     return (
         <div style={styles.container}>
@@ -165,55 +261,55 @@ const ProductPage = () => {
                 <div style={styles.breadcrumb}>
                     <span style={{ cursor: 'pointer' }} onClick={() => navigate('/portal/shop')}>Shop Marketplace</span>
                     <span style={{ opacity: 0.3 }}>/</span>
-                    <span style={{ color: '#111813' }}>Enterprise CRM Pro</span>
+                    <span style={{ color: '#000000' }}>{product.name}</span>
                 </div>
 
                 <div style={styles.productGrid}>
                     <div style={styles.imageSection}>
-                        <div style={styles.mainImage}>PRODUCT VISUALIZATION</div>
+                        <div style={{ ...styles.mainImage, padding: '0', overflow: 'hidden' }}>
+                            <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                             {[1, 2, 3, 4].map(i => (
-                                <div key={i} style={{ aspectRatio: '1', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #dbe6de' }}></div>
+                                <div key={i} style={{ aspectRatio: '1', backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #dbe6de', overflow: 'hidden' }}>
+                                    <img src={product.image} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />
+                                </div>
                             ))}
                         </div>
                     </div>
 
                     <div style={styles.infoSection}>
                         <div>
-                            <div style={{ color: themeColor, fontWeight: '900', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '1px' }}>Top Rated Solution</div>
-                            <h1 style={styles.productTitle}>Enterprise CRM Pro</h1>
+                            <div style={{ color: themeColor, fontWeight: '900', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '1px' }}>{product.type === 'software' ? 'Enterprise License' : 'Cloud Service'}</div>
+                            <h1 style={{ ...styles.productTitle, color: '#000000' }}>{product.name}</h1>
                         </div>
 
-                        <div style={styles.productPrice}>₹960.00 <span style={{ fontSize: '15px', color: '#61896b', fontWeight: '500' }}>/ user / month</span></div>
+                        <div style={{ ...styles.productPrice, color: themeColor }}>
+                            ₹{plans.find(p => p.id === selectedPlan).price}
+                            <span style={{ fontSize: '15px', color: '#61896b', fontWeight: '500' }}> / {selectedPlan}</span>
+                        </div>
 
                         <div>
-                            <div style={styles.sectionLabel}>Choose License Type</div>
-                            <div style={styles.variantGrid}>
-                                {['Starter', 'Professional', 'Enterprise'].map(v => (
-                                    <button
-                                        key={v}
-                                        style={selectedVariant === v ? { ...styles.variantButton, ...styles.variantButtonActive } : styles.variantButton}
-                                        onClick={() => setSelectedVariant(v)}
+                            <div style={{ ...styles.sectionLabel, color: '#000000' }}>Select Subscription Tier</div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                {plans.map(plan => (
+                                    <div
+                                        key={plan.id}
+                                        onClick={() => setSelectedPlan(plan.id)}
+                                        style={selectedPlan === plan.id ? { ...styles.planCard, ...styles.planCardActive } : styles.planCard}
                                     >
-                                        {v}
-                                    </button>
+                                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#000000' }}>{plan.label}</div>
+                                        <div style={{ fontSize: '11px', color: '#61896b', marginBottom: '8px' }}>{plan.sub}</div>
+                                        <div style={{ fontSize: '16px', fontWeight: '900', color: themeColor }}>₹{plan.price}</div>
+                                    </div>
                                 ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <div style={styles.sectionLabel}>License Count</div>
-                            <div style={styles.quantityControls}>
-                                <button style={styles.qtyBtn} onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button>
-                                <span style={{ padding: '0 24px', color: '#111813', fontWeight: '900', borderLeft: '1px solid #dbe6de', borderRight: '1px solid #dbe6de', minWidth: '40px', textAlign: 'center' }}>{quantity}</span>
-                                <button style={styles.qtyBtn} onClick={() => setQuantity(quantity + 1)}>+</button>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '20px' }}>
                             <button
                                 style={styles.addToCart}
-                                onClick={() => navigate('/portal/cart')}
+                                onClick={() => addToCart(product)}
                                 onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
                                 onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
                             >
@@ -221,20 +317,20 @@ const ProductPage = () => {
                             </button>
                             <button
                                 style={styles.buyNow}
-                                onClick={() => navigate('/portal/cart')}
+                                onClick={() => handleBuyNow(product)}
                                 onMouseOver={(e) => e.target.style.backgroundColor = '#222'}
                                 onMouseOut={(e) => e.target.style.backgroundColor = '#111813'}
                             >
-                                Buy Now
+                                Buy Subscription Now
                             </button>
                         </div>
 
                         <div style={{ borderTop: '1px solid #f0f2f0', paddingTop: '32px' }}>
-                            <div style={styles.sectionLabel}>Product Highlights</div>
-                            <p style={styles.description}>
-                                Scalable CRM solution with AI-powered insights, automated lead management,
-                                and seamless integration with your accounting software. Manage global teams
-                                with ease and secure data protection.
+                            <div style={{ ...styles.sectionLabel, color: '#000000' }}>Product Highlights</div>
+                            <p style={{ ...styles.description, color: '#000000' }}>
+                                High-performance {product.type} solution tailored for enterprise-scale operations.
+                                Includes dedicated support, advanced security features, and seamless integration
+                                with your existing infrastructure.
                             </p>
                         </div>
                     </div>

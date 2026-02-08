@@ -188,20 +188,38 @@ const ShopPage = () => {
     };
 
     const [products, setProducts] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [sortType, setSortType] = useState('none'); // none, low-high, high-low, newest
+
+    const categories = ['All', 'Cloud', 'Software', 'Services', 'Infrastructure'];
+
+    const getDomainImage = (name, type) => {
+        const lowerName = name.toLowerCase();
+        // Updated to strictly non-living technology objects
+        if (lowerName.includes('cloud') || type === 'cloud') return `https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600&auto=format&fit=crop`; // Server Room
+        if (lowerName.includes('software') || type === 'software') return `https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=600&auto=format&fit=crop`; // Code
+        if (lowerName.includes('service') || type === 'service') return `https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=600&auto=format&fit=crop`; // Microchip
+        if (lowerName.includes('infra') || type === 'infra') return `https://images.unsplash.com/photo-1558494949-ef010cbdcc51?q=80&w=600&auto=format&fit=crop`; // Network cables
+        return `https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=600&auto=format&fit=crop`; // Tech workplace (non-living)
+    };
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
                 const { data } = await api.get('/products');
-                // Map API data to UI format if needed
                 const formatted = data.map(p => ({
                     id: p.id,
                     name: p.name,
-                    price: `$${p.price}`,
+                    price: `₹${p.price}`,
+                    numericPrice: parseFloat(p.price),
                     badge: p.type === 'software' ? 'License' : null,
-                    billing: 'Monthly' // or fetch from backend if available
+                    billing: 'Monthly',
+                    category: p.type === 'software' ? 'Software' : 'Cloud',
+                    image: getDomainImage(p.name, p.type)
                 }));
                 setProducts(formatted);
+                setFilteredProducts(formatted);
             } catch (error) {
                 console.error("Failed to fetch products", error);
             }
@@ -209,7 +227,28 @@ const ShopPage = () => {
         fetchProducts();
     }, []);
 
-    const addToCart = async (product) => {
+    useEffect(() => {
+        let result = [...products];
+        if (selectedCategory !== 'All') {
+            result = result.filter(p => p.category === selectedCategory);
+        }
+        if (searchQuery) {
+            result = result.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        }
+
+        // Apply Sorting
+        if (sortType === 'low-high') {
+            result.sort((a, b) => a.numericPrice - b.numericPrice);
+        } else if (sortType === 'high-low') {
+            result.sort((a, b) => b.numericPrice - a.numericPrice);
+        } else if (sortType === 'newest') {
+            result.sort((a, b) => b.id - a.id);
+        }
+
+        setFilteredProducts(result);
+    }, [selectedCategory, searchQuery, products, sortType]);
+
+    const addToCart = async (product, silent = false) => {
         const token = localStorage.getItem('token');
         if (!token) {
             navigate('/login');
@@ -218,11 +257,17 @@ const ShopPage = () => {
 
         try {
             await api.post('/cart', { productId: product.id, quantity: 1 });
-            alert('Added to cart!');
+            window.dispatchEvent(new Event('cartUpdate'));
+            if (!silent) alert('Added to cart!');
         } catch (error) {
             console.error("Failed to add to cart", error);
-            alert("Failed to add to cart");
+            if (!silent) alert("Failed to add to cart");
         }
+    };
+
+    const handleBuyNow = async (product) => {
+        await addToCart(product, true);
+        navigate('/portal/cart');
     };
 
     return (
@@ -235,40 +280,42 @@ const ShopPage = () => {
                 <div style={styles.sidebar}>
                     <div style={styles.sidebarSection}>
                         <div style={styles.sidebarTitle}>Categories</div>
-                        <div style={styles.sidebarItem}>Cloud Services</div>
-                        <div style={styles.sidebarItem}>Productivity</div>
-                        <div style={styles.sidebarItem}>Infrastructure</div>
-                    </div>
-                    <div style={styles.sidebarSection}>
-                        <div style={styles.sidebarTitle}>Subscriptions</div>
-                        <div style={styles.sidebarItem}>Monthly Plans</div>
-                        <div style={styles.sidebarItem}>Yearly Plans</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {categories.map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setSelectedCategory(cat)}
+                                    style={{
+                                        ...styles.sidebarItem,
+                                        backgroundColor: selectedCategory === cat ? `${themeColor}20` : 'transparent',
+                                        color: '#000000',
+                                        padding: '10px 16px',
+                                        borderRadius: '10px',
+                                        border: selectedCategory === cat ? `1px solid ${themeColor}` : '1px solid transparent',
+                                        fontWeight: selectedCategory === cat ? '800' : '600',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        justifyContent: 'flex-start'
+                                    }}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                {/* Content Area */}
                 <div style={styles.contentArea}>
                     {/* Filter Row */}
                     <div style={styles.filterRow}>
                         <div style={styles.filterLeft}>
-                            <div style={styles.dropdown}>
-                                <button
-                                    style={styles.dropdownButton}
-                                    onClick={() => setProductTypeOpen(!productTypeOpen)}
-                                >
-                                    All Categories <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                                </button>
-                                {productTypeOpen && (
-                                    <div style={styles.dropdownMenu}>
-                                        <div style={styles.dropdownItem} onClick={() => setProductTypeOpen(false)}>All Categories</div>
-                                        <div style={styles.dropdownItem} onClick={() => setProductTypeOpen(false)}>Cloud</div>
-                                        <div style={styles.dropdownItem} onClick={() => setProductTypeOpen(false)}>Services</div>
-                                    </div>
-                                )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#000000', fontWeight: '800', fontSize: '14px' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>category</span>
+                                {selectedCategory}
                             </div>
 
                             {/* Search Input */}
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', marginLeft: '24px' }}>
                                 <input
                                     type="text"
                                     placeholder="Search marketplace..."
@@ -278,7 +325,7 @@ const ShopPage = () => {
                                     onFocus={(e) => e.target.style.borderColor = themeColor}
                                     onBlur={(e) => e.target.style.borderColor = '#dbe6de'}
                                 />
-                                <span className="material-symbols-outlined" style={{ position: 'absolute', right: '14px', top: '10px', fontSize: '20px', color: '#61896b' }}>search</span>
+                                <span className="material-symbols-outlined" style={{ position: 'absolute', right: '14px', top: '10px', fontSize: '20px', color: '#000000' }}>search</span>
                             </div>
                         </div>
 
@@ -288,13 +335,16 @@ const ShopPage = () => {
                                 style={styles.dropdownButton}
                                 onClick={() => setSortOpen(!sortOpen)}
                             >
-                                Sort By <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                                {sortType === 'none' ? 'Sort By' :
+                                    sortType === 'low-high' ? 'Price: Low to High' :
+                                        sortType === 'high-low' ? 'Price: High to Low' : 'Newest Arrivals'}
+                                <span className="material-symbols-outlined text-[18px]">expand_more</span>
                             </button>
                             {sortOpen && (
                                 <div style={styles.dropdownMenu}>
-                                    <div style={styles.dropdownItem} onClick={() => setSortOpen(false)}>Price: Low to High</div>
-                                    <div style={styles.dropdownItem} onClick={() => setSortOpen(false)}>Price: High to Low</div>
-                                    <div style={styles.dropdownItem} onClick={() => setSortOpen(false)}>Newest Arrivals</div>
+                                    <div style={styles.dropdownItem} onClick={() => { setSortType('low-high'); setSortOpen(false); }} onMouseOver={(e) => e.target.style.backgroundColor = '#f8faf9'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>Price: Low to High</div>
+                                    <div style={styles.dropdownItem} onClick={() => { setSortType('high-low'); setSortOpen(false); }} onMouseOver={(e) => e.target.style.backgroundColor = '#f8faf9'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>Price: High to Low</div>
+                                    <div style={styles.dropdownItem} onClick={() => { setSortType('newest'); setSortOpen(false); }} onMouseOver={(e) => e.target.style.backgroundColor = '#f8faf9'} onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}>Newest Arrivals</div>
                                 </div>
                             )}
                         </div>
@@ -302,15 +352,16 @@ const ShopPage = () => {
 
                     {/* Product Grid */}
                     <div style={styles.productGrid}>
-                        {products.map((product) => (
+                        {filteredProducts.map((product) => (
                             <div
                                 key={product.id}
                                 style={styles.productCard}
-                                onClick={() => addToCart(product)} // Changed from navigate to addToCart for now, or navigate to detail then add
-                                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.borderColor = themeColor; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.05)'; }}
-                                onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = '#dbe6de'; e.currentTarget.style.boxShadow = '0 2px 15px rgba(0,0,0,0.02)'; }}
+                                onClick={() => navigate(`/portal/product/${product.id}`)}
                             >
-                                <div style={styles.productImage}>PREVIEW</div>
+                                <div style={{ ...styles.productImage, position: 'relative', overflow: 'hidden' }}>
+                                    <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }} />
+                                </div>
+
                                 {product.badge && (
                                     <span style={styles.productBadge}>{product.badge}</span>
                                 )}
@@ -322,6 +373,14 @@ const ShopPage = () => {
                     </div>
                 </div>
             </div>
+            <style>
+                {`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                `}
+            </style>
         </div>
     );
 };
