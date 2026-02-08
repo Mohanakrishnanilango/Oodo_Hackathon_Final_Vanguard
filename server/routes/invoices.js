@@ -130,36 +130,58 @@ router.get('/:id', protect, async (req, res) => {
     }
 });
 
-// Create Invoice (From Subscription)
-router.post('/', async (req, res) => {
+// Create Invoice (Manual or From Subscription)
+router.post('/', protect, async (req, res) => {
     const { subscription_id, customer_id, amount, date, due_date } = req.body;
 
-    // Generate Invoice Number (Simple logic)
+    // Generate Invoice Number
     const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 900) + 100;
+    const random = Math.floor(Math.random() * 9000) + 1000;
     const invoice_number = `INV/${year}/${random}`;
 
     try {
+        // RBAC Check for Internal Staff
+        if (req.user.role === 'internal_staff') {
+            const [customer] = await db.query('SELECT sales_person_id FROM users WHERE id = ?', [customer_id]);
+            if (customer.length === 0 || customer[0].sales_person_id !== req.user.id) {
+                return res.status(403).json({ message: 'Not authorized: Customer not assigned to you' });
+            }
+        }
+
         const [result] = await db.query(
             'INSERT INTO invoices (invoice_number, subscription_id, customer_id, amount, date, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [invoice_number, subscription_id, customer_id, amount, date, due_date, 'Draft']
+            [invoice_number, subscription_id || null, customer_id, amount, date || new Date(), due_date, 'Draft']
         );
         res.status(201).json({
             id: invoice_number,
             dbId: result.insertId,
-            status: 'Draft'
+            status: 'Draft',
+            amount,
+            customer_id
         });
     } catch (error) {
+        console.error('Invoice Creation Error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
 
 // Update Invoice Status
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', protect, async (req, res) => {
     const { status } = req.body;
     const invoiceId = req.params.id; // Expecting INV/2026/xxx format
 
     try {
+        // RBAC Check
+        if (req.user.role === 'internal_staff') {
+            const [inv] = await db.query(
+                'SELECT u.sales_person_id FROM invoices i JOIN users u ON i.customer_id = u.id WHERE i.invoice_number = ?',
+                [invoiceId]
+            );
+            if (inv.length === 0 || inv[0].sales_person_id !== req.user.id) {
+                return res.status(403).json({ message: 'Not authorized' });
+            }
+        }
+
         await db.query('UPDATE invoices SET status = ? WHERE invoice_number = ?', [status, invoiceId]);
         res.json({ message: 'Status updated' });
     } catch (error) {

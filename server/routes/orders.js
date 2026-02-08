@@ -66,6 +66,62 @@ router.post('/', protect, async (req, res) => {
     }
 });
 
+// Complete Order (Directly from frontend cart data)
+router.post('/complete', protect, async (req, res) => {
+    const { items, total, paymentMethod } = req.body;
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ message: 'Cart is empty' });
+        }
+
+        // 1. Create Subscription
+        const [subResult] = await connection.query(
+            `INSERT INTO subscriptions (customer_id, plan, status, start_date, recurring_amount, payment_term, sales_person) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [req.user.id, 'Standard', 'Confirmed', new Date(), total, 'Immediate', 'Online Portal']
+        );
+        const subId = subResult.insertId;
+
+        // 2. Insert Subscription Lines
+        for (const item of items) {
+            await connection.query(
+                `INSERT INTO subscription_lines (subscription_id, product_id, quantity, unit_price, subtotal) 
+                 VALUES (?, ?, ?, ?, ?)`,
+                [subId, item.productId || 1, item.quantity, item.price, item.price * item.quantity]
+            );
+        }
+
+        // 3. Create Paid Invoice
+        const year = new Date().getFullYear();
+        const invoice_number = `INV/${year}/${Math.floor(1000 + Math.random() * 9000)}`;
+        const [invResult] = await connection.query(
+            `INSERT INTO invoices (invoice_number, subscription_id, customer_id, amount, date, due_date, status) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [invoice_number, subId, req.user.id, total, new Date(), new Date(), 'Paid']
+        );
+        const invoiceId = invResult.insertId;
+
+        // 4. Record Payment
+        await connection.query(
+            `INSERT INTO payments (invoice_id, date, amount, method, status, reference) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [invoiceId, new Date(), total, paymentMethod || 'GPay', 'Success', `TXN-${Date.now()}`]
+        );
+
+        await connection.commit();
+        res.status(201).json({ message: 'Order completed successfully', orderId: subId });
+    } catch (error) {
+        await connection.rollback();
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    } finally {
+        connection.release();
+    }
+});
+
 // Get User Orders
 router.get('/', protect, async (req, res) => {
     try {

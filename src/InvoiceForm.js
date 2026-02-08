@@ -34,6 +34,7 @@ const InvoiceForm = ({ customers, onSave, onDiscard }) => {
             customer_id: selectedCustomer.id,
             subscription_id: null, // Manual invoice
             amount: parseFloat(formData.amount),
+            date: formData.date,
             due_date: formData.dueDate
         };
 
@@ -45,7 +46,7 @@ const InvoiceForm = ({ customers, onSave, onDiscard }) => {
             }
         } catch (error) {
             console.error('Failed to create invoice', error);
-            alert('Failed to create invoice');
+            alert('Failed to create invoice: ' + (error.response?.data?.message || error.message));
         }
     };
 

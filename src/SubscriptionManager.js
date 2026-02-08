@@ -132,7 +132,7 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
             setView('list');
         } catch (error) {
             console.error('Failed to save subscription', error);
-            alert('Failed to save subscription');
+            alert('Failed to save subscription: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -266,7 +266,7 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row justify-between gap-4 items-center bg-white dark:bg-[#1a2e1f] p-4 rounded-xl shadow-sm border border-[#dbe6de] dark:border-[#2a4531]">
                     <div className="flex items-center gap-2">
-                        {userRole !== 'internal' && (
+                        {userRole !== 'internal_staff' && (
                             <button onClick={handleNewClick} className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors">New</button>
                         )}
                     </div>
@@ -317,7 +317,7 @@ const SubscriptionManager = ({ onNavigate, subscriptions, setSubscriptions, invo
             <div className="flex flex-col gap-4 animate-fade-in">
                 <div className="flex flex-col sm:flex-row justify-between gap-4 bg-white dark:bg-[#1a2e1f] p-4 rounded-xl shadow-sm border border-[#dbe6de] dark:border-[#2a4531]">
                     <div className="flex items-center gap-2 flex-wrap">
-                        {userRole !== 'internal' && (
+                        {userRole !== 'internal_staff' && (
                             <>
                                 <button onClick={handleNewClick} className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors">New</button>
                                 <div className="flex gap-2 ml-2">

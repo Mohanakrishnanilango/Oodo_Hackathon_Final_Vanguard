@@ -1,22 +1,34 @@
-import React, { useState } from 'react';
-
-// Mock Payment History Data
-const mockPayments = [
-    { id: 'PAY/2026/001', date: 'Jan 15, 2026', customer: 'Acme Corp', invoice: 'INV/2026/001', method: 'Credit Card', amount: '$140.00', status: 'Completed' },
-    { id: 'PAY/2025/128', date: 'Dec 16, 2025', customer: 'Acme Corp', invoice: 'INV/2025/128', method: 'Bank Transfer', amount: '$140.00', status: 'Completed' },
-    { id: 'PAY/2025/142', date: 'Dec 20, 2025', customer: 'Globex Inc', invoice: 'INV/2025/142', method: 'Credit Card', amount: '$116.00', status: 'Completed' },
-    { id: 'PAY/2025/055', date: 'Apr 15, 2025', customer: 'Umbrella Corp', invoice: 'INV/2025/055', method: 'Wire Transfer', amount: '$5,000.00', status: 'Completed' },
-    { id: 'PAY/2026/005', date: 'Jan 18, 2026', customer: 'Globex Inc', invoice: 'INV/2026/005', method: 'Credit Card', amount: '$116.00', status: 'Failed' }
-];
+import React, { useState, useEffect } from 'react';
+import api from './api';
 
 const PaymentHistory = () => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [payments, setPayments] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const filteredPayments = mockPayments.filter(payment =>
+    useEffect(() => {
+        const fetchPayments = async () => {
+            try {
+                const { data } = await api.get('/payments');
+                setPayments(data);
+            } catch (error) {
+                console.error("Failed to fetch payments", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchPayments();
+    }, []);
+
+    const filteredPayments = payments.filter(payment =>
         payment.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (payment.customer && payment.customer.toLowerCase().includes(searchTerm.toLowerCase())) ||
         payment.invoice.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    if (loading) {
+        return <div className="p-8 text-center text-[#61896b]">Loading payments...</div>;
+    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -68,8 +80,8 @@ const PaymentHistory = () => {
                                     <td className="px-6 py-4 text-[#61896b] dark:text-[#a0cfa5]">{payment.method}</td>
                                     <td className="px-6 py-4 font-medium text-[#111813] dark:text-white">{payment.amount}</td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                                'bg-red-100 text-red-700'
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${payment.status === 'Completed' || payment.status === 'Success' ? 'bg-green-100 text-green-700' :
+                                            'bg-red-100 text-red-700'
                                             }`}>
                                             {payment.status}
                                         </span>

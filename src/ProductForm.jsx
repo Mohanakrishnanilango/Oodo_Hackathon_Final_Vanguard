@@ -56,7 +56,7 @@ const ProductForm = ({ onSave, onDiscard }) => {
             }
         } catch (error) {
             console.error('Failed to create product', error);
-            alert('Failed to create product');
+            alert('Failed to create product: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -113,8 +113,8 @@ const ProductForm = ({ onSave, onDiscard }) => {
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
                             >
                                 <option value="service">Service</option>
-                                <option value="consomable">Consumable</option>
-                                <option value="storable">Storable Product</option>
+                                <option value="software">Software</option>
+                                <option value="goods">Goods</option>
                             </select>
                         </div>
 

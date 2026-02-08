@@ -39,7 +39,7 @@ const InternalUserDashboard = () => {
 
     const fetchData = async () => {
         try {
-            const [subsRes, invsRes, prodsRes, custsRes, statsRes] = await Promise.all([
+            const results = await Promise.allSettled([
                 api.get('/subscriptions'),
                 api.get('/invoices'),
                 api.get('/products?admin=true'),
@@ -47,35 +47,35 @@ const InternalUserDashboard = () => {
                 api.get('/dashboard/stats')
             ]);
 
-            setSubscriptions(subsRes.data);
-            setInvoices(invsRes.data);
-            setProducts(prodsRes.data);
+            const [subsRes, invsRes, prodsRes, custsRes, statsRes] = results;
 
-            // Calculate stats for customers
-            const rawCustomers = custsRes.data;
-            const subs = subsRes.data;
-            const enrichedCustomers = rawCustomers.filter(u => u.role !== 'admin').map(cust => { // Filter out admins if needed, or keep all
-                const userSubs = subs.filter(s => s.customer_id === cust.id || s.customer === cust.name); // Handle ID or Name match
-                // Note: db subscriptions have customer_id. API returns it. But also customer name maybe?
-                // Let's check routes/subscriptions.js. It returns customer_name as customer.
-                // But it also returns customer_id.
-                // So s.customer_id === cust.id is safer.
+            if (subsRes.status === 'fulfilled') setSubscriptions(subsRes.value.data);
+            if (invsRes.status === 'fulfilled') setInvoices(invsRes.value.data);
+            if (prodsRes.status === 'fulfilled') setProducts(prodsRes.value.data);
+            if (statsRes.status === 'fulfilled') setDashboardStats(statsRes.value.data);
 
-                const activeSubs = userSubs.filter(s => s.status === 'Confirmed' || s.status === 'Active');
-                const totalRevenue = userSubs.reduce((acc, s) => acc + (parseFloat(s.recurring_amount) || 0), 0);
-                // Status: Active if has active subs, else Inactive/Prospect
-                const status = activeSubs.length > 0 ? 'Active' : userSubs.length > 0 ? 'Churned' : 'Prospect';
+            if (custsRes.status === 'fulfilled' && subsRes.status === 'fulfilled') {
+                const rawCustomers = custsRes.value.data;
+                const subs = subsRes.value.data;
+                const enrichedCustomers = rawCustomers.filter(u => u.role !== 'admin').map(cust => {
+                    const userSubs = subs.filter(s => s.customer_id === cust.id || s.customer === cust.name);
+                    const activeSubs = userSubs.filter(s => s.status === 'Confirmed' || s.status === 'Active');
+                    const totalRevenue = userSubs.reduce((acc, s) => acc + (parseFloat(s.recurring_amount) || 0), 0);
+                    const status = activeSubs.length > 0 ? 'Active' : userSubs.length > 0 ? 'Churned' : 'Prospect';
 
-                return {
-                    ...cust,
-                    subscriptions: activeSubs.length,
-                    totalRevenue: `$${totalRevenue.toFixed(2)}`,
-                    status: status
-                };
-            });
-            setCustomers(enrichedCustomers);
+                    return {
+                        ...cust,
+                        subscriptions: activeSubs.length,
+                        totalRevenue: `$${totalRevenue.toFixed(2)}`,
+                        status: status
+                    };
+                });
+                setCustomers(enrichedCustomers);
+            } else if (custsRes.status === 'fulfilled') {
+                // Fallback if subscriptions failed but customers loaded
+                setCustomers(custsRes.value.data.filter(u => u.role !== 'admin'));
+            }
 
-            setDashboardStats(statsRes.data);
         } catch (error) {
             console.error("Failed to fetch dashboard data", error);
         }
@@ -160,6 +160,7 @@ const InternalUserDashboard = () => {
                             setCustomerView('list');
                         }}
                         onDiscard={() => setCustomerView('list')}
+                        userRole={userRole}
                     />
                 );
             case 'products':
@@ -181,12 +182,13 @@ const InternalUserDashboard = () => {
                 if (invoiceView === 'form') {
                     return (
                         <InvoiceForm
-                            customers={customers}
+                            customers={userRole === 'internal_staff' ? customers.filter(c => c.sales_person_id === user.id) : customers}
                             onSave={() => {
                                 fetchData();
                                 setInvoiceView('list');
                             }}
                             onDiscard={() => setInvoiceView('list')}
+                            userRole={userRole}
                         />
                     );
                 }
@@ -312,8 +314,10 @@ const InternalUserDashboard = () => {
 
             {/* Main Content */}
             <main className="flex-1 overflow-auto">
-                <header className="bg-white dark:bg-[#1a2e1f] border-b border-[#dbe6de] dark:border-[#2a4531] p-4 sticky top-0 z-10">
-                    <h2 className="text-xl font-bold text-[#111813] dark:text-white capitalize">{activeTab}</h2>
+                <header className="flex h-16 items-center justify-between border-b border-[#dbe6de] bg-white px-6 dark:border-[#2a4531] dark:bg-[#1a2e1f]">
+                    <h2 className="text-xl font-bold text-[#111813] dark:text-white">
+                        {user?.role === 'admin' ? 'Admin Dashboard' : 'Staff Dashboard'}
+                    </h2>
                 </header>
 
                 <div className="p-6">

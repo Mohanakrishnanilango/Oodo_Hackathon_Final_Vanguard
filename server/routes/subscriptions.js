@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../config/db');
 
 const router = express.Router();
+const { protect } = require('../middleware/authMiddleware');
 
 // Get All Subscriptions
 router.get('/', async (req, res) => {
@@ -101,7 +102,10 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create Subscription
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
+    if (req.user.role === 'internal_staff') {
+        return res.status(403).json({ message: 'Not authorized: Read-only access' });
+    }
     const { customer_id, plan, start_date, payment_term, sales_person, orderLines } = req.body;
 
     // Calculate recurring amount
@@ -159,7 +163,10 @@ router.post('/', async (req, res) => {
 });
 
 // Update Status / Confirm
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', protect, async (req, res) => {
+    if (req.user.role === 'internal_staff') {
+        return res.status(403).json({ message: 'Not authorized: Read-only access' });
+    }
     const { status } = req.body;
     // Strip "S" prefix from ID
     const dbId = parseInt(req.params.id.replace('S', ''));
@@ -173,7 +180,10 @@ router.patch('/:id/status', async (req, res) => {
 });
 
 // Update Subscription (Full Update - mainly for Quotations)
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
+    if (req.user.role === 'internal_staff') {
+        return res.status(403).json({ message: 'Not authorized: Read-only access' });
+    }
     const dbId = parseInt(req.params.id.replace('S', ''));
     const { customer_id, plan, start_date, payment_term, sales_person, orderLines } = req.body;
 
@@ -223,7 +233,10 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete Subscription
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
+    if (req.user.role === 'internal_staff') {
+        return res.status(403).json({ message: 'Not authorized: Read-only access' });
+    }
     const dbId = parseInt(req.params.id.replace('S', ''));
     try {
         await db.query('DELETE FROM subscriptions WHERE id = ?', [dbId]);

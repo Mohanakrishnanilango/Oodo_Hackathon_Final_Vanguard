@@ -33,40 +33,49 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create Product (Admin)
-router.post('/', async (req, res) => {
+const { protect } = require('../middleware/authMiddleware');
+
+// Create Product (Admin/Staff Only)
+router.post('/', protect, async (req, res) => {
     const { name, type, price, cost, description, is_active } = req.body;
+
+    // Optional: Add role check if needed, though protect ensures a valid token
+    // If you want strictly Admin: if (req.user.role !== 'admin') return res.status(401)...
+
     try {
         const [result] = await db.query(
             'INSERT INTO products (name, type, price, cost, description, is_active) VALUES (?, ?, ?, ?, ?, ?)',
-            [name, type, price, cost, description, is_active ? 1 : 0]
+            [name, type, price, cost, description || '', is_active ? 1 : 0]
         );
         res.status(201).json({ id: result.insertId, ...req.body });
     } catch (error) {
+        console.error('Database error during product creation:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
 
 // Update Product
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
     const { name, type, price, cost, description, is_active } = req.body;
     try {
         await db.query(
             'UPDATE products SET name=?, type=?, price=?, cost=?, description=?, is_active=? WHERE id=?',
-            [name, type, price, cost, description, is_active ? 1 : 0, req.params.id]
+            [name, type, price, cost, description || '', is_active ? 1 : 0, req.params.id]
         );
         res.json({ message: 'Product updated' });
     } catch (error) {
+        console.error('Database error during product update:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
 
 // Delete Product
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
     try {
         await db.query('DELETE FROM products WHERE id = ?', [req.params.id]);
         res.json({ message: 'Product removed' });
     } catch (error) {
+        console.error('Database error during product deletion:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 });

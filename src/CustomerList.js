@@ -13,7 +13,7 @@ const CustomerList = ({ customers, onNew, userRole }) => {
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 items-center bg-white dark:bg-[#1a2e1f] p-4 rounded-xl shadow-sm border border-[#dbe6de] dark:border-[#2a4531]">
                 <div className="flex items-center gap-2">
-                    {userRole !== 'internal' && (
+                    {userRole !== 'internal_staff' && (
                         <button
                             onClick={onNew}
                             className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"

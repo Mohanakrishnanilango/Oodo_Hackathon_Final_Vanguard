@@ -51,18 +51,31 @@ const CartPage = () => {
         window.dispatchEvent(new Event('cartUpdate'));
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = React.useCallback(async () => {
         try {
-            // Mocking order placement since we are now using localStorage for cart
+            const payload = {
+                items: cartItems.map(item => ({
+                    productId: item.id || 1, // Assuming id exists in item
+                    quantity: item.quantity,
+                    price: item.price
+                })),
+                total: total,
+                paymentMethod: 'GPay'
+            };
+
+            await api.post('/orders/complete', payload);
+
             localStorage.removeItem('cart');
             window.dispatchEvent(new Event('cartUpdate'));
-            alert('Order placed successfully!');
+            alert('Order placed successfully! Transaction recorded.');
             navigate('/portal/orders');
         } catch (error) {
             console.error("Failed to place order", error);
-            alert("Failed to place order");
+            alert(error.response?.data?.message || "Failed to place order");
+            // If error, likely need to reset status in PaymentSection, but this prop doesn't support callback for error.
+            // For now, keeping as is.
         }
-    };
+    }, [cartItems, total, navigate]);
 
     const subtotal = cartItems.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
     const tax = subtotal * 0.12;

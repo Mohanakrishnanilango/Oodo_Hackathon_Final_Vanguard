@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
 const router = express.Router();
+const { protect } = require('../middleware/authMiddleware');
 
 // Generate Token
 const generateToken = (id) => {
@@ -14,7 +15,7 @@ const generateToken = (id) => {
 
 // Register
 router.post('/register', async (req, res) => {
-    const { name, email, password, company, address } = req.body;
+    const { name, email, password, company, address, phone, role } = req.body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please add all fields' });
@@ -30,8 +31,8 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         const [result] = await db.query(
-            'INSERT INTO users (name, email, password, company, address) VALUES (?, ?, ?, ?, ?)',
-            [name, email, hashedPassword, company || '', address || '']
+            'INSERT INTO users (name, email, password_hash, company, address, phone, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [name, email, hashedPassword, company || '', address || '', phone || '', role || 'user']
         );
 
         res.status(201).json({
@@ -57,10 +58,11 @@ router.post('/login', async (req, res) => {
         }
 
         const user = users[0];
-        if (user.password !== password && !(await bcrypt.compare(password, user.password))) {
-            // Note: For existing plain text passwords (like admin123 setup), we check directly. 
-            // In production, migrate everything to hashed passwords.
-            if (user.password !== password) {
+        // Check for both legacy 'password' and new 'password_hash' column during migration transition
+        const storedPassword = user.password_hash || user.password;
+
+        if (storedPassword !== password && !(await bcrypt.compare(password, storedPassword))) {
+            if (storedPassword !== password) {
                 return res.status(400).json({ message: 'Invalid credentials' });
             }
         }
@@ -93,12 +95,27 @@ router.get('/me', async (req, res) => {
     }
 });
 
-// Get All Users (Admin)
-router.get('/users', async (req, res) => {
+// Get All Users (Admin/Staff)
+router.get('/users', protect, async (req, res) => {
     try {
-        const [users] = await db.query('SELECT id, name, email, role, phone, company, address FROM users');
+        const [users] = await db.query('SELECT id, name, email, role, phone, company, address, sales_person_id FROM users');
         res.json(users);
     } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// Update User (Admin only - for assignment)
+router.put('/users/:id', protect, async (req, res) => {
+    const { sales_person_id } = req.body;
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+    }
+    try {
+        await db.query('UPDATE users SET sales_person_id = ? WHERE id = ?', [sales_person_id, req.params.id]);
+        res.json({ message: 'User updated' });
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
@@ -119,7 +136,7 @@ router.put('/profile', async (req, res) => {
         if (password) {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
-            query += ', password=?';
+            query += ', password_hash=?';
             params.push(hashedPassword);
         }
 
@@ -133,7 +150,7 @@ router.put('/profile', async (req, res) => {
 
         res.json(users[0]);
     } catch (error) {
-        console.error(error);
+        console.error('Profile Update Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -41,3 +41,30 @@
 ### [2026-02-08] Cart Sync & Coupon Validation
 - **Cart Persistence Fix**: Migrated `CartPage.jsx` from backend API to `localStorage` synchronization. This ensures that adding or removing products works consistently across the entire application.
 - **Strict Coupon Logic**: Implemented validation for coupon codes. Only `FIRST`, `SECOND`, and `THIRD` are now accepted; empty or invalid codes are rejected with a user notification.
+
+### [2026-02-08] Authentication Integration & Role-Based Routing
+- **New Auth Service**: Ports the robust `authService.js` to JavaScript, providing managed methods for login, registration, and persistent sessions.
+- **Role-Based Redirects**: Implemented a global `RoleBasedRedirect` logic. Admins and Staff are routed to the Internal Dashboard, while Customers are directed to the Portal.
+- **LoginPage Overhaul**: Refactored the login screen with a sleek new design, including integrated Registration and Forgot Password (OTP) flows.
+- **Session Persistence**: Secured the application so that user roles and details are correctly retrieved from storage on every page refresh or dashboard visit.
+- **Database Schema Alignment**: Developed and applied `fix_schema.js` and `init_db.js` to resolve column naming conflicts and ensure the `users` and `password_resets` tables match the required specifications.
+
+### [2026-02-08] Dashboard & Payments Refinement
+- **Real Transaction Tracking**: Replaced mock checkout logic with a robust `POST /orders/complete` API that records subscriptions, paid invoices, and real-time payments in the database.
+- **Dynamic Payment History**: Refactored `PaymentHistory.js` to fetch and display the live transaction log from the server, removing all hardcoded entries.
+- **Role-Based Branding**: Updated the Internal Dashboard to dynamically display "Admin Dashboard" or "Staff Dashboard" based on the authenticated user's role.
+- **Product Creation Fix**: Corrected the product type ENUM mismatch (`consomable` -> `goods`, `software`) in `ProductForm.jsx` to ensure successful backend creation for Admin users.
+
+### [2026-02-08] Critical Admin Creation & Schema Fixes
+- **Unified Password Column**: Standardized the `users` table to use `password_hash` across both Port 5000 and Port 3001 servers. Fixed Port 3001's auth routes which were previously broken after the schema migration.
+- **Secured Product Management**: Integrated `protect` middleware into all product routes (`POST`, `PUT`, `DELETE`) on Port 3001, ensuring that only authenticated Admins/Staff can modify the inventory.
+- **Robust Field Mapping**: Enhanced SQL queries in both `auth.js` and `products.js` to handle optional fields correctly and prevent "Unknown column" or "Invalid ENUM" errors during Admin-initiated creations.
+
+### [2026-02-08] Admin Dashboard Stabilization
+- **Fixed Creation Blockers**: Resolved 500 errors in Product, Customer, and Invoice creation by aligning SQL column names (`password_hash`), adding missing fields (`date` in invoices), and correcting camelCase/snake_case payload mismatches.
+- **Port Alignment**: Standardized the backend server to default to Port 3001, ensuring seamless connectivity with the frontend's API configuration.
+- **Enhanced Security**: Applied `protect` middleware to all manual creation routes, ensuring inventory and user management are strictly accessible only to authenticated session holders.
+
+### [2026-02-08] Frontend Instrumentation & Security
+- **Detailed Error Reporting**: Updated `ProductForm`, `SubscriptionManager`, `InvoiceForm`, and `CustomerForm` to alert specific error messages from the backend instead of generic "Failed to create" notifications. This functionality is critical for diagnosing environment-specific failures.
+- **Secured Subscriptions**: Applied `protect` middleware to the `POST /api/subscriptions` route, ensuring that subscription creation is restricted to authenticated users, matching the security protocols of other modules.

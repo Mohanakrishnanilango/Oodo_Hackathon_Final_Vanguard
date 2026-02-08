@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -19,6 +19,7 @@ app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/cart', require('./routes/cart'));
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/payments', require('./routes/payments'));
 
 // Start Server
 app.listen(PORT, () => {

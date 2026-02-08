@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import api from './api';
 
 
-const CustomerForm = ({ onSave, onDiscard }) => {
+const CustomerForm = ({ onSave, onDiscard, userRole }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -43,7 +43,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
             }
         } catch (error) {
             console.error('Failed to create customer', error);
-            alert(error.response?.data?.message || 'Failed to create customer');
+            alert('Failed to create customer: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -52,12 +52,14 @@ const CustomerForm = ({ onSave, onDiscard }) => {
             {/* Header / Actions */}
             <div className="flex flex-col sm:flex-row justify-between gap-4 bg-white dark:bg-[#1a2e1f] p-4 rounded-xl shadow-sm border border-[#dbe6de] dark:border-[#2a4531]">
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleSubmit}
-                        className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"
-                    >
-                        Save
-                    </button>
+                    {userRole !== 'internal_staff' && (
+                        <button
+                            onClick={handleSubmit}
+                            className="bg-primary hover:bg-primary-dark text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"
+                        >
+                            Save
+                        </button>
+                    )}
                     <button
                         onClick={onDiscard}
                         className="bg-white dark:bg-transparent border border-[#dbe6de] dark:border-[#2a4531] text-[#61896b] hover:text-[#111813] font-bold py-2 px-6 rounded-lg shadow-sm transition-colors"
@@ -82,6 +84,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow font-bold"
                                 placeholder="e.g. Wayne Enterprises"
+                                disabled={userRole === 'internal_staff'}
                             />
                         </div>
                         <div>
@@ -95,6 +98,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
                                 placeholder="contact@example.com"
+                                disabled={userRole === 'internal_staff'}
                             />
                         </div>
                         <div>
@@ -108,6 +112,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
                                 placeholder="********"
+                                disabled={userRole === 'internal_staff'}
                             />
                         </div>
                         <div>
@@ -121,6 +126,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
                                 placeholder="+1 555-0000"
+                                disabled={userRole === 'internal_staff'}
                             />
                         </div>
                     </div>
@@ -138,6 +144,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
                                 placeholder="123 Business Way"
+                                disabled={userRole === 'internal_staff'}
                             />
                         </div>
                         <div>
@@ -151,6 +158,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
                                 placeholder="Gotham City"
+                                disabled={userRole === 'internal_staff'}
                             />
                         </div>
                         <div>
@@ -162,6 +170,7 @@ const CustomerForm = ({ onSave, onDiscard }) => {
                                 value={formData.status}
                                 onChange={handleInputChange}
                                 className="w-full px-4 py-2 rounded-lg border border-[#dbe6de] dark:border-[#3a5840] bg-background-light dark:bg-[#15251a] text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-shadow"
+                                disabled={userRole === 'internal_staff'}
                             >
                                 <option value="Active">Active</option>
                                 <option value="Prospect">Prospect</option>
