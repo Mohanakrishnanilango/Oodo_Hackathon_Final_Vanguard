@@ -77,11 +77,26 @@ router.post('/complete', protect, async (req, res) => {
             return res.status(400).json({ message: 'Cart is empty' });
         }
 
+        // 1. Identify Sales Person (Product Owner)
+        // For simplicity, take the owner of the FIRST product. If mixed, logic can be complex.
+        const productId = items[0].productId || items[0].id; // items from frontend might have different shape
+        const [product] = await connection.query('SELECT created_by FROM products WHERE id = ?', [productId]);
+
+        let salesPersonId = null;
+        if (product.length > 0 && product[0].created_by) {
+            salesPersonId = product[0].created_by;
+        }
+
+        // Update Customer's Sales Person if not already assigned
+        if (salesPersonId) {
+            await connection.query('UPDATE users SET sales_person_id = ? WHERE id = ? AND sales_person_id IS NULL', [salesPersonId, req.user.id]);
+        }
+
         // 1. Create Subscription
         const [subResult] = await connection.query(
             `INSERT INTO subscriptions (customer_id, plan, status, start_date, recurring_amount, payment_term, sales_person) 
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [req.user.id, 'Standard', 'Confirmed', new Date(), total, 'Immediate', 'Online Portal']
+            [req.user.id, 'Standard', 'Confirmed', new Date(), total, 'Immediate', 'Online Portal'] // sales_person string is legacy text, maybe update?
         );
         const subId = subResult.insertId;
 
@@ -90,7 +105,7 @@ router.post('/complete', protect, async (req, res) => {
             await connection.query(
                 `INSERT INTO subscription_lines (subscription_id, product_id, quantity, unit_price, subtotal) 
                  VALUES (?, ?, ?, ?, ?)`,
-                [subId, item.productId || 1, item.quantity, item.price, item.price * item.quantity]
+                [subId, item.productId || item.id || 1, item.quantity, item.price, item.price * item.quantity]
             );
         }
 

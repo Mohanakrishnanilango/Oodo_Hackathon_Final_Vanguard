@@ -2,11 +2,11 @@
 const STORAGE_TOKEN_KEY = 'token';
 const STORAGE_USER_SESSION = 'user_session';
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = "http://localhost:3001";
 
 // 1. REGISTER
 export const register = async (name, email, password, role = 'user') => {
-    const res = await fetch(`${API_BASE_URL}/api/register`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, role })
@@ -25,7 +25,7 @@ export const register = async (name, email, password, role = 'user') => {
 
 // 2. LOGIN
 export const login = async (email, password) => {
-    const res = await fetch(`${API_BASE_URL}/api/login`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
@@ -44,7 +44,7 @@ export const login = async (email, password) => {
 
 // 3. REQUEST PASSWORD RESET (OTP)
 export const requestPasswordReset = async (email) => {
-    const res = await fetch(`${API_BASE_URL}/api/request-password-reset`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/request-password-reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
@@ -60,7 +60,7 @@ export const requestPasswordReset = async (email) => {
 
 // 4. VERIFY OTP
 export const verifyOtp = async (email, otp) => {
-    const res = await fetch(`${API_BASE_URL}/api/verify-otp`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp })
@@ -76,7 +76,7 @@ export const verifyOtp = async (email, otp) => {
 
 // 5. RESET PASSWORD
 export const resetPassword = async (email, otp, newPassword) => {
-    const res = await fetch(`${API_BASE_URL}/api/reset-password`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, newPassword })

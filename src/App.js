@@ -11,6 +11,7 @@ import OrdersPage from './OrdersPage';
 import OrderPage from './OrderPage';
 import InvoicePage from './InvoicePage';
 import ProductPage from './ProductPage';
+import PortalPaymentsPage from './PortalPaymentsPage';
 import { getStoredUser } from './authService';
 import './App.css';
 
@@ -39,6 +40,7 @@ function App() {
           <Route path="/portal/cart" element={<CartPage />} />
           <Route path="/portal/account" element={<UserDetailsPage />} />
           <Route path="/portal/orders" element={<OrdersPage />} />
+          <Route path="/portal/payments" element={<PortalPaymentsPage />} />
           <Route path="/portal/order/:id" element={<OrderPage />} />
           <Route path="/portal/invoices" element={<InvoicePage />} />
           <Route path="/portal/invoice/:id" element={<InvoicePage />} />

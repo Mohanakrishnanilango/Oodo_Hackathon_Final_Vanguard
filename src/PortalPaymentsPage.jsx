@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import PortalHeader from './components/PortalHeader';
 import api from './api';
 
-const OrdersPage = () => {
+const PortalPaymentsPage = () => {
     const navigate = useNavigate();
     const themeColor = '#2ecc71';
 
@@ -57,7 +57,7 @@ const OrdersPage = () => {
             borderRadius: '24px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
         },
-        orderHeader: {
+        header: {
             fontSize: '24px',
             fontWeight: '900',
             marginBottom: '32px',
@@ -104,29 +104,21 @@ const OrdersPage = () => {
         }
     };
 
-    const [orders, setOrders] = useState([]);
+    const [payments, setPayments] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchOrders = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-
+        const fetchPayments = async () => {
             try {
-                const { data } = await api.get('/orders');
-                // Map API data
-                const formatted = data.map(o => ({
-                    id: `S${String(o.id).padStart(4, '0')}`,
-                    date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                    total: `₹${o.recurring_amount}`,
-                    status: o.status,
-                    statusColor: o.status === 'Confirmed' ? '#2ecc71' : o.status === 'Cancelled' ? '#e74c3c' : '#f1c40f'
-                }));
-                setOrders(formatted);
+                const { data } = await api.get('/payments/my');
+                setPayments(data);
             } catch (error) {
-                console.error("Failed to fetch orders", error);
+                console.error("Failed to fetch payments", error);
+            } finally {
+                setLoading(false);
             }
         };
-        fetchOrders();
+        fetchPayments();
     }, []);
 
     return (
@@ -138,21 +130,19 @@ const OrdersPage = () => {
                     <div
                         style={styles.menuBox}
                         onClick={() => navigate('/portal/account')}
-                        onMouseOver={(e) => e.target.style.borderColor = themeColor}
-                        onMouseOut={(e) => e.target.style.borderColor = '#dbe6de'}
                     >
                         <span className="material-symbols-outlined">account_circle</span>
                         Account Settings
                     </div>
                     <div
-                        style={{ ...styles.menuBox, ...styles.menuBoxActive }}
+                        style={styles.menuBox}
                         onClick={() => navigate('/portal/orders')}
                     >
                         <span className="material-symbols-outlined">shopping_bag</span>
                         Order History
                     </div>
                     <div
-                        style={styles.menuBox}
+                        style={{ ...styles.menuBox, ...styles.menuBoxActive }}
                         onClick={() => navigate('/portal/payments')}
                     >
                         <span className="material-symbols-outlined">payments</span>
@@ -161,47 +151,60 @@ const OrdersPage = () => {
                 </div>
 
                 <div style={styles.mainContainer}>
-                    <div style={styles.orderHeader}>My Order History</div>
+                    <div style={styles.header}>My Payment History</div>
 
-                    <table style={styles.table}>
-                        <thead>
-                            <tr style={styles.tableHeader}>
-                                <th style={styles.headerCell}>Reference</th>
-                                <th style={styles.headerCell}>Order Date</th>
-                                <th style={styles.headerCell}>Status</th>
-                                <th style={{ ...styles.headerCell, textAlign: 'right' }}>Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orders.map((order) => (
-                                <tr
-                                    key={order.id}
-                                    style={styles.row}
-                                    onClick={() => navigate(`/portal/order/${order.id}`)}
-                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8faf9'}
-                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                >
-                                    <td style={{ ...styles.cell, ...styles.idBadge }}>{order.id}</td>
-                                    <td style={styles.cell}>{order.date}</td>
-                                    <td style={styles.cell}>
-                                        <span style={{
-                                            ...styles.badge,
-                                            backgroundColor: `${order.statusColor}15`,
-                                            color: order.statusColor,
-                                            border: `1px solid ${order.statusColor}30`
-                                        }}>
-                                            {order.status.toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td style={{ ...styles.cell, textAlign: 'right', fontWeight: '900' }}>{order.total}</td>
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: '#61896b' }}>Loading transactions...</div>
+                    ) : (
+                        <table style={styles.table}>
+                            <thead>
+                                <tr style={styles.tableHeader}>
+                                    <th style={styles.headerCell}>Reference</th>
+                                    <th style={styles.headerCell}>Date</th>
+                                    <th style={styles.headerCell}>Invoice</th>
+                                    <th style={styles.headerCell}>Method</th>
+                                    <th style={styles.headerCell}>Status</th>
+                                    <th style={{ ...styles.headerCell, textAlign: 'right' }}>Amount</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {payments.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#61896b' }}>No payments found.</td>
+                                    </tr>
+                                ) : (
+                                    payments.map((p) => (
+                                        <tr
+                                            key={p.id}
+                                            style={styles.row}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8faf9'}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                            <td style={{ ...styles.cell, ...styles.idBadge }}>#{p.id}</td>
+                                            <td style={styles.cell}>{p.date}</td>
+                                            <td style={styles.cell}>{p.invoice}</td>
+                                            <td style={styles.cell}>{p.method}</td>
+                                            <td style={styles.cell}>
+                                                <span style={{
+                                                    ...styles.badge,
+                                                    backgroundColor: p.status === 'Completed' ? '#2ecc7115' : '#f1c40f15',
+                                                    color: p.status === 'Completed' ? '#2ecc71' : '#f1c40f',
+                                                    border: `1px solid ${p.status === 'Completed' ? '#2ecc7130' : '#f1c40f30'}`
+                                                }}>
+                                                    {p.status.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td style={{ ...styles.cell, textAlign: 'right', fontWeight: '900' }}>{p.amount}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
         </div>
     );
 };
 
-export default OrdersPage;
+export default PortalPaymentsPage;

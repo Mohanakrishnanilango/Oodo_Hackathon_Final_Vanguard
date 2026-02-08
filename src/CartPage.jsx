@@ -51,6 +51,10 @@ const CartPage = () => {
         window.dispatchEvent(new Event('cartUpdate'));
     };
 
+    const subtotal = cartItems.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
+    const tax = subtotal * 0.12;
+    const total = subtotal + tax;
+
     const handleCheckout = React.useCallback(async () => {
         try {
             const payload = {
@@ -76,10 +80,6 @@ const CartPage = () => {
             // For now, keeping as is.
         }
     }, [cartItems, total, navigate]);
-
-    const subtotal = cartItems.reduce((acc, item) => acc + (parseFloat(item.price) * item.quantity), 0);
-    const tax = subtotal * 0.12;
-    const total = subtotal + tax;
 
     const canNavigateTo = (step) => {
         return step <= maxReachedStep;

@@ -174,6 +174,15 @@ const PortalHeader = ({ themeColor = '#2ecc71' }) => {
                                 <span className="material-symbols-outlined text-[18px] text-[#61896b]">shopping_bag</span>
                                 My orders
                             </button>
+                            <button
+                                style={styles.dropdownItem}
+                                onClick={() => { navigate('/portal/payments'); setShowProfileMenu(false); }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = '#f8faf9'}
+                                onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                            >
+                                <span className="material-symbols-outlined text-[18px] text-[#61896b]">payments</span>
+                                My payments
+                            </button>
                             <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }}></div>
                             <button
                                 onClick={handleLogout}

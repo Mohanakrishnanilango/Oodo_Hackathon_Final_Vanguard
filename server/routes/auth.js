@@ -36,9 +36,12 @@ router.post('/register', async (req, res) => {
         );
 
         res.status(201).json({
-            id: result.insertId,
-            name,
-            email,
+            user: {
+                id: result.insertId,
+                name,
+                email,
+                role: role || 'user'
+            },
             token: generateToken(result.insertId),
         });
     } catch (error) {
@@ -68,10 +71,12 @@ router.post('/login', async (req, res) => {
         }
 
         res.json({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            },
             token: generateToken(user.id),
         });
     } catch (error) {

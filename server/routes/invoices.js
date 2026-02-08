@@ -35,16 +35,24 @@ router.get('/my', protect, async (req, res) => {
 });
 
 // Get Invoices (All or by Subscription)
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
     try {
         let query = `
-            SELECT i.*, u.name as customer_name, s.plan
+            SELECT i.*, u.name as customer_name, s.plan, u.sales_person_id
             FROM invoices i
             JOIN users u ON i.customer_id = u.id
             LEFT JOIN subscriptions s ON i.subscription_id = s.id
-            ORDER BY i.created_at DESC
         `;
-        const [invoices] = await db.query(query);
+        let params = [];
+
+        if (req.user.role === 'internal_staff') {
+            query += ' WHERE u.sales_person_id = ?';
+            params.push(req.user.id);
+        }
+
+        query += ' ORDER BY i.created_at DESC';
+
+        const [invoices] = await db.query(query, params);
 
         const formattedInvoices = invoices.map(inv => ({
             id: inv.invoice_number,
@@ -59,6 +67,7 @@ router.get('/', async (req, res) => {
 
         res.json(formattedInvoices);
     } catch (error) {
+        console.error('Fetch Invoices Error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
